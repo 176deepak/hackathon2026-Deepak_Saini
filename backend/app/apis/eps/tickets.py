@@ -2,8 +2,14 @@ from fastapi import APIRouter, HTTPException, Path, Query, status
 
 from app.core.dependencies import TicketServiceDep, TicketStatusFilter
 from app.schemas.api import (
-    RESTResponse, TicketDetailData, TicketListData, TicketStatusData, 
+    RESTResponse, TicketDetailData, TicketListData, TicketStatusData,
     TicketStatusUpdateRequest, TicketSummary,
+)
+from ..docs import (
+    TICKETS_GET_API_DOC,
+    TICKETS_LIST_API_DOC,
+    TICKETS_STATUS_GET_API_DOC,
+    TICKETS_STATUS_UPDATE_API_DOC,
 )
 
 router = APIRouter(prefix="/tickets", tags=["Tickets"])
@@ -12,8 +18,7 @@ router = APIRouter(prefix="/tickets", tags=["Tickets"])
 @router.get(
     "/",
     response_model=RESTResponse[TicketListData],
-    summary="List tickets",
-    description="List support tickets with optional status filter and pagination.",
+    summary="List tickets"
 )
 async def list_tickets(
     ticket_service: TicketServiceDep,
@@ -57,8 +62,7 @@ async def list_tickets(
 @router.get(
     "/{ticket_id}",
     response_model=RESTResponse[TicketDetailData],
-    summary="Get ticket details",
-    description="Get full ticket details by external ticket id or internal UUID.",
+    summary="Get ticket details"
 )
 async def get_ticket(
     ticket_service: TicketServiceDep,
@@ -85,8 +89,7 @@ async def get_ticket(
 @router.get(
     "/{ticket_id}/status",
     response_model=RESTResponse[TicketStatusData],
-    summary="Get ticket status",
-    description="Get ticket processing status by external ticket id or internal UUID.",
+    summary="Get ticket status"
 )
 async def get_ticket_status(
     ticket_service: TicketServiceDep,
@@ -110,8 +113,7 @@ async def get_ticket_status(
 @router.patch(
     "/{ticket_id}/status",
     response_model=RESTResponse[TicketStatusData],
-    summary="Update ticket status",
-    description="Update ticket workflow status by external ticket id or internal UUID.",
+    summary="Update ticket status"
 )
 async def update_ticket_status(
     payload: TicketStatusUpdateRequest,
@@ -131,3 +133,9 @@ async def update_ticket_status(
         ),
         msg="Ticket status updated successfully",
     )
+
+
+list_tickets.__doc__ = TICKETS_LIST_API_DOC
+get_ticket.__doc__ = TICKETS_GET_API_DOC
+get_ticket_status.__doc__ = TICKETS_STATUS_GET_API_DOC
+update_ticket_status.__doc__ = TICKETS_STATUS_UPDATE_API_DOC

@@ -14,9 +14,6 @@ router = APIRouter(prefix="/audit", tags=["Audit Logs"])
     "/{ticket_id}",
     response_model=RESTResponse[AuditLogData],
     summary="Get ticket audit timeline",
-    description=(
-        "Get complete run, step, and tool-call timeline for a ticket using external id or UUID."
-    ),
 )
 async def get_audit_logs(
     audit_service: AuditServiceDep,

@@ -24,12 +24,6 @@ APP_LICENSE_INFO = {
 
 OPENAPI_TAGS = [
     {
-        "name": "Agent",
-        "description": (
-            "Core agent execution APIs. Run the autonomous support agent on tickets."
-        )
-    },
-    {
         "name": "Tickets",
         "description": (
             "Manage and fetch support tickets, their status, and outcomes."
@@ -45,12 +39,6 @@ OPENAPI_TAGS = [
         "name": "Audit Logs",
         "description": (
             "Detailed agent reasoning, tool calls, and execution logs for each ticket."
-        )
-    },
-    {
-        "name": "Tools",
-        "description": (
-            "Mock tool APIs used by the agent (orders, customers, refunds, etc.)."
         )
     },
     {

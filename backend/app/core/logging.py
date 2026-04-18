@@ -3,7 +3,6 @@ import queue
 import threading
 import logging
 import logging.handlers
-from logtail import LogtailHandler
 from pythonjsonlogger import jsonlogger
 from concurrent_log_handler import ConcurrentTimedRotatingFileHandler
 from typing import ClassVar
@@ -128,7 +127,6 @@ class EmitThreadFilter(logging.Filter):
 class AppLoggerAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         extra = kwargs.setdefault("extra", {})
-        extra.setdefault("service", envs.SERVICE)
         extra.setdefault("environment", envs.ENVIRONMENT)
         extra.setdefault("version", envs.APP_VERSION)
 
@@ -191,14 +189,6 @@ def setup_logging():
     access_file_handler.setLevel(logging.INFO)
     access_file_handler.addFilter(AccessLogFilter())
 
-    # Logtail Handler
-    logtail = LogtailHandler(
-        source_token=envs.BETTERSTACK_TELEMETRY_SOURCE_TOKEN,
-        host=envs.BETTERSTACK_TELEMETRY_INGESTION_HOST,
-    )
-    logtail.setFormatter(json_formatter)
-    logtail.setLevel(logging.INFO)
-
     # Queue handler (used by app and intercepted loggers)
     queue_handler = logging.handlers.QueueHandler(log_queue)
 
@@ -219,7 +209,6 @@ def setup_logging():
         console,
         file_handler,
         access_file_handler,
-        logtail,
         respect_handler_level=True,
     )
 
@@ -230,15 +219,12 @@ def setup_logging():
 
 def extra_(
     *,
-    operation: str,
-    status: str,
+    operation: str | None = None,
+    status: str | None = None,
     event: str | None = None,
     **kwargs,
 ) -> dict:
-    payload = {
-        "status": status,
-        "operation": operation,
-    }
+    payload = {}
 
     request_id = kwargs.get("request_id")
     if request_id is None:
@@ -246,6 +232,10 @@ def extra_(
     if request_id is not None:
         payload["request_id"] = request_id
 
+    if status:
+        payload["status"] = status
+    if operation:
+        payload["operation"] = operation
     if event:
         payload["event"] = event
 

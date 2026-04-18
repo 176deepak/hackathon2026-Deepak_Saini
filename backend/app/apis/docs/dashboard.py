@@ -1,22 +1,35 @@
-DASHBOARD_API_DOC = """# Dashboard API
+DASHBOARD_METRICS_API_DOC = """# Dashboard Metrics API
 
 Base path: `/api/v1/dashboard`
 
-## Metrics
+## Endpoint
 - Method: `GET /metrics`
-- Returns aggregate counters:
+- Purpose: Fetch aggregate ticket counters.
+
+## Response
+- Type: `RESTResponse[DashboardMetricsData]`
+- Fields:
   - `total_tickets`
   - `resolved`
   - `escalated`
   - `failed`
-- Response: `RESTResponse[DashboardMetricsData]`
+"""
 
-## Recent Activity
+
+DASHBOARD_RECENT_ACTIVITY_API_DOC = """# Dashboard Recent Activity API
+
+Base path: `/api/v1/dashboard`
+
+## Endpoint
 - Method: `GET /recent-activity`
-- Query params:
-  - `limit` (default: `10`, max: `50`)
-- Response: `RESTResponse[DashboardRecentActivityData]`
-- Activity item fields:
+- Purpose: Fetch latest ticket updates.
+
+## Query Params
+- `limit` (default: `10`, max: `50`)
+
+## Response
+- Type: `RESTResponse[DashboardRecentActivityData]`
+- Item fields:
   - `ticket_id`
   - `status`
   - `subject`

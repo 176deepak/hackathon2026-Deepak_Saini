@@ -1,37 +1,72 @@
-
-TICKETS_API_DOC = """# Tickets API
+TICKETS_LIST_API_DOC = """# Tickets List API
 
 Base path: `/api/v1/tickets`
 
-## List Tickets
+## Endpoint
 - Method: `GET /`
-- Query params:
-  - `status` (optional): `pending|processing|resolved|escalated|waiting_for_customer|failed`
-  - `page` (default: `1`)
-  - `limit` (default: `20`, max: `100`)
-- Response: `RESTResponse[TicketListData]`
+- Purpose: List support tickets.
 
-## Get Ticket
+## Query Params
+- `status` (optional): `pending|processing|resolved|escalated|waiting_for_customer|failed`
+- `page` (default: `1`)
+- `limit` (default: `20`, max: `100`)
+
+## Response
+- Type: `RESTResponse[TicketListData]`
+"""
+
+
+TICKETS_GET_API_DOC = """# Ticket Detail API
+
+Base path: `/api/v1/tickets`
+
+## Endpoint
 - Method: `GET /{ticket_id}`
-- Path param:
-  - `ticket_id`: external id (`TKT-001`) or internal UUID
-- Response: `RESTResponse[TicketDetailData]`
+- Purpose: Fetch one ticket by external id or UUID.
 
-## Get Ticket Status
+## Response
+- Type: `RESTResponse[TicketDetailData]`
+
+## Error Cases
+- `404` when ticket is not found
+"""
+
+
+TICKETS_STATUS_GET_API_DOC = """# Ticket Status API
+
+Base path: `/api/v1/tickets`
+
+## Endpoint
 - Method: `GET /{ticket_id}/status`
-- Response: `RESTResponse[TicketStatusData]`
+- Purpose: Fetch current ticket workflow status.
 
-## Update Ticket Status
+## Response
+- Type: `RESTResponse[TicketStatusData]`
+
+## Error Cases
+- `404` when ticket is not found
+"""
+
+
+TICKETS_STATUS_UPDATE_API_DOC = """# Ticket Status Update API
+
+Base path: `/api/v1/tickets`
+
+## Endpoint
 - Method: `PATCH /{ticket_id}/status`
-- Request body:
+- Purpose: Update ticket workflow status.
+
+## Request Body
 ```json
 {
   "status": "processing"
 }
 ```
-- Response: `RESTResponse[TicketStatusData]`
+
+## Response
+- Type: `RESTResponse[TicketStatusData]`
 
 ## Error Cases
 - `404` when ticket is not found
-- `422` for invalid query/body values
+- `422` for invalid body values
 """

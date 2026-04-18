@@ -2,9 +2,11 @@ from fastapi import APIRouter, Query, status
 
 from app.core.dependencies import DashboardServiceDep
 from app.schemas.api import (
-    DashboardMetricsData, DashboardRecentActivityData, DashboardRecentActivityItem, 
-    RESTResponse
+    DashboardMetricsData, DashboardRecentActivityData, DashboardRecentActivityItem,
+    RESTResponse,
 )
+from ..docs import DASHBOARD_METRICS_API_DOC, DASHBOARD_RECENT_ACTIVITY_API_DOC
+
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -12,10 +14,7 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 @router.get(
     "/metrics",
     response_model=RESTResponse[DashboardMetricsData],
-    summary="Get dashboard metrics",
-    description=(
-        "Fetch dashboard counters including total tickets, resolved, escalated, and failed."
-    ),
+    summary="Get dashboard metrics"
 )
 async def get_metrics(dashboard_service: DashboardServiceDep):
     metrics = await dashboard_service.get_metrics()
@@ -36,8 +35,7 @@ async def get_metrics(dashboard_service: DashboardServiceDep):
 @router.get(
     "/recent-activity",
     response_model=RESTResponse[DashboardRecentActivityData],
-    summary="Get recent activity",
-    description="Fetch latest ticket updates seen by the support agent.",
+    summary="Get recent activity"
 )
 async def recent_activity(
     dashboard_service: DashboardServiceDep,
@@ -52,3 +50,7 @@ async def recent_activity(
         ),
         msg="Recent activity fetched successfully",
     )
+
+
+get_metrics.__doc__ = DASHBOARD_METRICS_API_DOC
+recent_activity.__doc__ = DASHBOARD_RECENT_ACTIVITY_API_DOC

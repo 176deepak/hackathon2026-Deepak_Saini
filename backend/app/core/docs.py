@@ -17,19 +17,9 @@ logger = AppLoggerAdapter(
     },
 )
 
-DOCS_FAVICON_URL = "/docs/favicon"
-DOCS_FAVICON_PATH = Path("assets") / "icon.png"
-
 
 def setup_protected_docs(app: FastAPI) -> None:
     logger.debug("Registering protected documentation routes")
-
-    @app.get(DOCS_FAVICON_URL, include_in_schema=False)
-    async def docs_favicon():
-        return FileResponse(
-            path=DOCS_FAVICON_PATH,
-            media_type="image/png",
-        )
 
     @app.get("/docs", include_in_schema=False)
     async def swagger_docs(
@@ -51,8 +41,7 @@ def setup_protected_docs(app: FastAPI) -> None:
 
         return get_swagger_ui_html(
             openapi_url="/openapi.json",
-            title=f"{app.title} - Docs",
-            swagger_favicon_url=DOCS_FAVICON_URL,
+            title=f"{app.title} - Docs"
         )
 
     @app.get("/redoc", include_in_schema=False)
@@ -75,8 +64,7 @@ def setup_protected_docs(app: FastAPI) -> None:
 
         return get_redoc_html(
             openapi_url="/openapi.json",
-            title=f"{app.title} - ReDoc",
-            redoc_favicon_url=DOCS_FAVICON_URL,
+            title=f"{app.title} - ReDoc"
         )
 
     @app.get("/openapi.json", include_in_schema=False)

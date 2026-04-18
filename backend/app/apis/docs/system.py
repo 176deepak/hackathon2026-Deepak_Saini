@@ -1,18 +1,31 @@
-SYSTEM_API_DOC = """# System API
+SYSTEM_HEALTH_API_DOC = """# System Health API
 
 Base path: `/api/v1/system`
 
-## Health
+## Endpoint
 - Method: `GET /health`
-- Description: readiness check (includes DB query `SELECT 1`)
-- Response: `RESTResponse[SystemHealthData]`
+- Purpose: Readiness check including database connectivity.
+
+## Response
+- Type: `RESTResponse[SystemHealthData]`
+- Fields:
   - `status`
   - `database`
   - `version`
   - `timestamp`
+"""
 
-## Ping
+
+SYSTEM_PING_API_DOC = """# System Ping API
+
+Base path: `/api/v1/system`
+
+## Endpoint
 - Method: `GET /ping`
-- Description: lightweight liveness check
-- Response: `RESTResponse[SystemPingData]`
+- Purpose: Lightweight liveness check.
+
+## Response
+- Type: `RESTResponse[SystemPingData]`
+- Fields:
+  - `message`
 """
