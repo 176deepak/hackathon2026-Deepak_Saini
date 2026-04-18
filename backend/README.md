@@ -1,55 +1,129 @@
-# ShopWave - Autonomous Support Resolution Agent (Hackathon 2026)
+# Backend - Autonomous Support Resolution Agent
 
-This repo is a backend for an "autonomous support resolution agent" that:
-1. Ingests tickets from a simulated source (seed data)
-2. Classifies and triages tickets
-3. Resolves tickets autonomously using tools (refund, reply) when safe
-4. Escalates intelligently when uncertain
-5. Audits every decision (steps + tool calls), not just the final answer
+This service powers the support resolution platform API and autonomous ticket agent.
 
-## Quick Start (Local)
+## Responsibilities
 
-### 1) Configure env
-Create `.env` based on `.env.example` and fill in:
-- `APP_*` settings (host/port/logs)
-- `PG_*` settings (Postgres)
-- Provider keys if you use LLM/KG tooling: `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `GROQ_API_KEY`
+- Ticket API and dashboard API
+- Auth API (Basic Auth login issuing JWT)
+- Agent orchestration and concurrent ticket processing
+- Tool execution and policy-aware decisioning
+- Full audit logging (run, step, and tool-call granularity)
+- Scheduler-driven background polling for pending tickets
 
-### 2) Seed mock data
-```powershell
+## Core Components
+
+- `app/apis/`: FastAPI route handlers
+- `app/services/`: business logic and orchestration
+- `app/repositories/`: data access and persistence
+- `app/agents/`: LangGraph graph, tools, prompts, nodes, and edges
+- `app/clients/`: PostgreSQL and Redis clients
+- `app/core/`: config, security, logging, scheduler, lifespan hooks
+
+## Agent Workflow
+
+1. Claim pending tickets from database.
+2. Execute graph with bounded concurrency (`AGENT_MAX_CONCURRENCY`).
+3. Run lookup + action tools with retry budget and fault recovery.
+4. Persist:
+   - agent run record
+   - per-step reasoning/actions
+   - tool invocation results/errors
+5. Mark final ticket status (`resolved`, `escalated`, or `failed`).
+
+## Policy Guardrails
+
+- `search_knowledge_base` is mandatory before policy-sensitive decisions.
+- `check_refund_eligibility` must execute before `issue_refund`.
+- On ambiguity, low confidence, or tool failure, agent escalates with structured summary.
+
+## Local Setup
+
+### 1. Environment
+
+Create `.env` from `.env.example` and fill all required values.
+
+### 2. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Run Migrations
+
+```bash
+alembic upgrade head
+```
+
+### 4. Seed Mock Data
+
+```bash
 python -m scripts.seed_data
 ```
 
-### 3) Run API
-```powershell
+### 5. Start API
+
+```bash
 python main.py
 ```
 
-### 4) Run Agent (process pending tickets)
-One-shot demo runner (processes all `pending` tickets concurrently until none remain):
-```powershell
+## Agent Execution
+
+### One-shot run
+
+```bash
 python -m scripts.run_agent
 ```
 
-Background mode (poller):
-- set `AGENT_AUTORUN=true` in `.env`
-- start API; the scheduler will run the agent every `AGENT_POLL_SECONDS`
+### Scheduled run
 
-API base path:
-- `/api/v{APP_APIS_VERSION}/tickets`
-- `/api/v{APP_APIS_VERSION}/dashboard`
-- `/api/v{APP_APIS_VERSION}/audit/{ticket_id}`
+Set in `.env`:
 
-Docs are protected by basic auth:
-- `/docs`
-- `/redoc`
+- `AGENT_AUTORUN=true`
+- `AGENT_POLL_SECONDS=30` (or desired interval)
 
-## Demo Expectations (Hackathon)
-The problem statement expects the agent to:
-- Use at least 3 tool calls in a single reasoning chain per ticket.
-- Process tickets concurrently (not sequentially).
-- Recover from tool failures (timeouts/malformed outputs) without crashing.
-- Produce explainable decisions.
-- Log tool calls, reasoning, and outcomes (audit trail).
+When API starts, scheduler will process pending tickets automatically.
 
-This repo already contains the tool surface and audit schema; the next step is wiring an agent runner that processes all pending tickets end-to-end with concurrency + retries + auditing.
+## API Surface
+
+- Auth:
+  - `POST /api/v1/auth/login`
+- Tickets:
+  - `GET /api/v1/tickets/`
+  - `GET /api/v1/tickets/{ticket_id}`
+  - `GET /api/v1/tickets/{ticket_id}/status`
+  - `PATCH /api/v1/tickets/{ticket_id}/status`
+- Dashboard:
+  - `GET /api/v1/dashboard/metrics`
+  - `GET /api/v1/dashboard/recent-activity`
+- Audit:
+  - `GET /api/v1/audit/{ticket_id}`
+
+## Docker
+
+Backend service is orchestrated from root compose:
+
+```bash
+docker compose up --build -d
+```
+
+The backend container runs:
+
+1. Alembic migrations
+2. Seed script
+3. FastAPI app startup
+
+## Persistence Model
+
+- PostgreSQL:
+  - customers, products, orders, tickets
+  - refunds, policy evaluations
+  - agent runs, steps, tool-call logs
+- Redis:
+  - runtime checkpoint/session storage for agent execution state
+
+## Operational Notes
+
+- Structured logging is enabled with level-appropriate events (`debug`, `info`, `warning`, `error`).
+- Logging fields are enriched using `extra_()` metadata for request, ticket, run, and tool context.
+- Designed for explainability-first behavior: no black-box terminal outcomes.
