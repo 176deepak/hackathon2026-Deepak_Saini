@@ -5,10 +5,12 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.logging import AppLoggerAdapter, LogCategory, LogLayer, extra_
 from app.models.enums import TicketStatus
 from app.models.models import Ticket, Escalation, Refund, TicketMessage
 from app.repositories.base import BaseTicketRepo, BaseEscalationRepo, BaseRefundRepo
 from app.schemas.repo import TicketOut
+import logging
 
 
 def _to_ticket_out(ticket: Ticket) -> TicketOut:
@@ -25,6 +27,14 @@ def _to_ticket_out(ticket: Ticket) -> TicketOut:
 class TicketRepo(BaseTicketRepo):
     def __init__(self, db: Session):
         super().__init__(db)
+        self._logger = AppLoggerAdapter(
+            logging.getLogger(__name__),
+            {
+                "layer": LogLayer.DB,
+                "category": LogCategory.DATABASE,
+                "component": self.__class__.__name__,
+            },
+        )
 
     def get_by_id(self, ticket_id: str) -> Optional[TicketOut]:
         try:
@@ -71,10 +81,32 @@ class TicketRepo(BaseTicketRepo):
             .limit(limit)
         )
         rows = self.db.scalars(stmt).all()
-        for t in rows:
-            t.status = TicketStatus.PROCESSING
-            self.db.add(t)
-        self.db.commit()
+        self._logger.debug(
+            "Claiming pending tickets",
+            extra=extra_(
+                operation="claim_pending",
+                status="start",
+                limit=limit,
+                found=len(rows),
+            ),
+        )
+        try:
+            for t in rows:
+                t.status = TicketStatus.PROCESSING
+                self.db.add(t)
+            self.db.commit()
+        except Exception:
+            self._logger.exception(
+                "Failed to claim pending tickets",
+                extra=extra_(
+                    operation="claim_pending",
+                    status="failure",
+                    limit=limit,
+                    found=len(rows),
+                ),
+            )
+            self.db.rollback()
+            raise
         return [_to_ticket_out(t) for t in rows]
 
     def list_tickets(

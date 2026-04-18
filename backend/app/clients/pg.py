@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import envs
-from app.core.logging import LogCategory, LogLayer, AppLoggerAdapter
+from app.core.logging import LogCategory, LogLayer, AppLoggerAdapter, extra_
 
 logger = AppLoggerAdapter(
     logging.getLogger(__name__),
@@ -40,19 +40,46 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def init_postgres() -> None:
-    pass
+    logger.info(
+        "PostgreSQL engine initialized",
+        extra=extra_(
+            operation="init_postgres",
+            status="success",
+            host=envs.PG_DB_HOST,
+            port=envs.PG_DB_PORT,
+            db=envs.PG_DB_NAME,
+            pool_size=envs.PG_MIN_CONNECTION,
+            max_overflow=envs.PG_MAX_CONNECTION,
+        ),
+    )
 
 
 async def get_pgdb() -> AsyncGenerator[AsyncSession | Any, Any]:
     async with AsyncSessionLocal() as session:
-        logger.debug("PostgreSQL session acquired")
+        logger.debug(
+            "PostgreSQL session acquired",
+            extra=extra_(operation="get_pgdb", status="start"),
+        )
         
         try:
             yield session
         
         finally:
-            logger.info("PostgreSQL session released")
+            logger.debug(
+                "PostgreSQL session released",
+                extra=extra_(operation="get_pgdb", status="success"),
+            )
 
 
 async def close_postgres() -> None:
-    await engine.dispose()
+    try:
+        await engine.dispose()
+        logger.info(
+            "PostgreSQL engine disposed",
+            extra=extra_(operation="close_postgres", status="success"),
+        )
+    except Exception:
+        logger.exception(
+            "Failed to dispose PostgreSQL engine",
+            extra=extra_(operation="close_postgres", status="failure"),
+        )

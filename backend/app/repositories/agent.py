@@ -1,9 +1,11 @@
 from datetime import datetime
 from uuid import UUID
+import logging
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.logging import AppLoggerAdapter, LogCategory, LogLayer, extra_
 from app.models.enums import AgentRunStatus, ToolExecutionStatus
 from app.models.models import AgentRun, AgentStep, Ticket, ToolExecution
 from app.repositories.base import (
@@ -27,53 +29,140 @@ def _to_agent_run_out(run: AgentRun) -> AgentRunOut:
 class AgentRunRepo(BaseAgentRunRepo):
     def __init__(self, db: Session):
         super().__init__(db)
+        self._logger = AppLoggerAdapter(
+            logging.getLogger(__name__),
+            {
+                "layer": LogLayer.DB,
+                "category": LogCategory.DATABASE,
+                "component": self.__class__.__name__,
+            },
+        )
 
     def create_run(self, ticket_id: str) -> AgentRunOut:
-        run = AgentRun(
-            ticket_id=UUID(ticket_id),
-            status=AgentRunStatus.RUNNING,
-            started_at=datetime.utcnow(),
-        )
-        self.db.add(run)
-        self.db.commit()
-        self.db.refresh(run)
-        return _to_agent_run_out(run)
+        try:
+            run = AgentRun(
+                ticket_id=UUID(ticket_id),
+                status=AgentRunStatus.RUNNING,
+                started_at=datetime.utcnow(),
+            )
+            self.db.add(run)
+            self.db.commit()
+            self.db.refresh(run)
+            self._logger.info(
+                "Agent run created",
+                extra=extra_(
+                    operation="repo_agent_run_create",
+                    status="success",
+                    ticket_uuid=ticket_id,
+                    run_id=str(run.id),
+                ),
+            )
+            return _to_agent_run_out(run)
+        except Exception:
+            self._logger.exception(
+                "Failed to create agent run",
+                extra=extra_(
+                    operation="repo_agent_run_create",
+                    status="failure",
+                    ticket_uuid=ticket_id,
+                ),
+            )
+            self.db.rollback()
+            raise
 
     def complete_run(
         self, run_id: str, status: str, decision: str, confidence: float
     ) -> None:
-        run = self.db.scalar(select(AgentRun).where(AgentRun.id == UUID(run_id)))
-        if run is None:
-            return
+        try:
+            run = self.db.scalar(select(AgentRun).where(AgentRun.id == UUID(run_id)))
+            if run is None:
+                self._logger.warning(
+                    "Run not found for completion",
+                    extra=extra_(
+                        operation="repo_agent_run_complete",
+                        status="skipped",
+                        run_id=run_id,
+                    ),
+                )
+                return
 
-        run.status = AgentRunStatus(status)
-        run.final_decision = decision
-        run.confidence_score = confidence
-        run.ended_at = datetime.utcnow()
-        run.total_steps = self.db.scalar(
-            select(func.count()).select_from(AgentStep).where(
-                AgentStep.agent_run_id == run.id
+            run.status = AgentRunStatus(status)
+            run.final_decision = decision
+            run.confidence_score = confidence
+            run.ended_at = datetime.utcnow()
+            run.total_steps = self.db.scalar(
+                select(func.count()).select_from(AgentStep).where(
+                    AgentStep.agent_run_id == run.id
+                )
+            ) or 0
+            run.total_tool_calls = self.db.scalar(
+                select(func.count())
+                .select_from(ToolExecution)
+                .join(AgentStep, ToolExecution.agent_step_id == AgentStep.id)
+                .where(AgentStep.agent_run_id == run.id)
+            ) or 0
+            self.db.add(run)
+            self.db.commit()
+            self._logger.info(
+                "Agent run completed",
+                extra=extra_(
+                    operation="repo_agent_run_complete",
+                    status="success",
+                    run_id=run_id,
+                    final_status=status,
+                    decision=decision,
+                ),
             )
-        ) or 0
-        run.total_tool_calls = self.db.scalar(
-            select(func.count())
-            .select_from(ToolExecution)
-            .join(AgentStep, ToolExecution.agent_step_id == AgentStep.id)
-            .where(AgentStep.agent_run_id == run.id)
-        ) or 0
-        self.db.add(run)
-        self.db.commit()
+        except Exception:
+            self._logger.exception(
+                "Failed to complete agent run",
+                extra=extra_(
+                    operation="repo_agent_run_complete",
+                    status="failure",
+                    run_id=run_id,
+                ),
+            )
+            self.db.rollback()
+            raise
 
     def fail_run(self, run_id: str, error: str) -> None:
-        run = self.db.scalar(select(AgentRun).where(AgentRun.id == UUID(run_id)))
-        if run is None:
-            return
+        try:
+            run = self.db.scalar(select(AgentRun).where(AgentRun.id == UUID(run_id)))
+            if run is None:
+                self._logger.warning(
+                    "Run not found for failure",
+                    extra=extra_(
+                        operation="repo_agent_run_fail",
+                        status="skipped",
+                        run_id=run_id,
+                    ),
+                )
+                return
 
-        run.status = AgentRunStatus.FAILED
-        run.failure_reason = error
-        run.ended_at = datetime.utcnow()
-        self.db.add(run)
-        self.db.commit()
+            run.status = AgentRunStatus.FAILED
+            run.failure_reason = error
+            run.ended_at = datetime.utcnow()
+            self.db.add(run)
+            self.db.commit()
+            self._logger.warning(
+                "Agent run failed",
+                extra=extra_(
+                    operation="repo_agent_run_fail",
+                    status="success",
+                    run_id=run_id,
+                ),
+            )
+        except Exception:
+            self._logger.exception(
+                "Failed to mark agent run failed",
+                extra=extra_(
+                    operation="repo_agent_run_fail",
+                    status="failure",
+                    run_id=run_id,
+                ),
+            )
+            self.db.rollback()
+            raise
 
     def get_audit_timeline(self, ticket_ref: str) -> dict | None:
         ticket = self.db.scalar(
@@ -147,6 +236,14 @@ class AgentRunRepo(BaseAgentRunRepo):
 class AgentStepRepo(BaseAgentStepRepo):
     def __init__(self, db: Session):
         super().__init__(db)
+        self._logger = AppLoggerAdapter(
+            logging.getLogger(__name__),
+            {
+                "layer": LogLayer.DB,
+                "category": LogCategory.DATABASE,
+                "component": self.__class__.__name__,
+            },
+        )
 
     def log_step(
         self,
@@ -158,24 +255,55 @@ class AgentStepRepo(BaseAgentStepRepo):
         output_payload: dict,
         status: str,
     ) -> str:
-        step = AgentStep(
-            agent_run_id=UUID(run_id),
-            step_number=step_number,
-            thought=thought,
-            action_type=action,
-            input_payload=input_payload,
-            output_payload=output_payload,
-            status=status,
-        )
-        self.db.add(step)
-        self.db.commit()
-        self.db.refresh(step)
-        return str(step.id)
+        try:
+            step = AgentStep(
+                agent_run_id=UUID(run_id),
+                step_number=step_number,
+                thought=thought,
+                action_type=action,
+                input_payload=input_payload,
+                output_payload=output_payload,
+                status=status,
+            )
+            self.db.add(step)
+            self.db.commit()
+            self.db.refresh(step)
+            self._logger.debug(
+                "Agent step logged",
+                extra=extra_(
+                    operation="repo_agent_step_log",
+                    status="success",
+                    run_id=run_id,
+                    step_number=step_number,
+                    step_id=str(step.id),
+                ),
+            )
+            return str(step.id)
+        except Exception:
+            self._logger.exception(
+                "Failed to log agent step",
+                extra=extra_(
+                    operation="repo_agent_step_log",
+                    status="failure",
+                    run_id=run_id,
+                    step_number=step_number,
+                ),
+            )
+            self.db.rollback()
+            raise
 
 
 class ToolExecutionRepo(BaseToolExecutionRepo):
     def __init__(self, db: Session):
         super().__init__(db)
+        self._logger = AppLoggerAdapter(
+            logging.getLogger(__name__),
+            {
+                "layer": LogLayer.DB,
+                "category": LogCategory.DATABASE,
+                "component": self.__class__.__name__,
+            },
+        )
 
     def log_tool_call(
         self,
@@ -186,13 +314,36 @@ class ToolExecutionRepo(BaseToolExecutionRepo):
         status: str,
         error: str = None,
     ) -> None:
-        execution = ToolExecution(
-            agent_step_id=UUID(step_id),
-            tool_name=tool_name,
-            request_payload=request,
-            response_payload=response,
-            status=ToolExecutionStatus(status),
-            error_message=error,
-        )
-        self.db.add(execution)
-        self.db.commit()
+        try:
+            execution = ToolExecution(
+                agent_step_id=UUID(step_id),
+                tool_name=tool_name,
+                request_payload=request,
+                response_payload=response,
+                status=ToolExecutionStatus(status),
+                error_message=error,
+            )
+            self.db.add(execution)
+            self.db.commit()
+            self._logger.debug(
+                "Tool execution logged",
+                extra=extra_(
+                    operation="repo_tool_execution_log",
+                    status="success",
+                    step_id=step_id,
+                    tool_name=tool_name,
+                    tool_status=status,
+                ),
+            )
+        except Exception:
+            self._logger.exception(
+                "Failed to log tool execution",
+                extra=extra_(
+                    operation="repo_tool_execution_log",
+                    status="failure",
+                    step_id=step_id,
+                    tool_name=tool_name,
+                ),
+            )
+            self.db.rollback()
+            raise

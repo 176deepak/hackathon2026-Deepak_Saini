@@ -1,9 +1,20 @@
 from typing import Optional
 
+import logging
 from app.models.enums import TicketStatus
 from app.repositories.base import BaseTicketRepo
 from app.schemas.repo import TicketOut
 from app.services.base import BaseTicketService
+from app.core.logging import AppLoggerAdapter, LogCategory, LogLayer, extra_
+
+logger = AppLoggerAdapter(
+    logging.getLogger(__name__),
+    {
+        "layer": LogLayer.SERVICE,
+        "category": LogCategory.API,
+        "component": __name__,
+    },
+)
 
 
 class TicketService(BaseTicketService):
@@ -13,12 +24,48 @@ class TicketService(BaseTicketService):
     def get_ticket(self, ticket_id: str) -> Optional[TicketOut]:
         normalized_ticket_id = self._safe_str(ticket_id)
         self._validate_non_empty(normalized_ticket_id, "ticket_id")
-        return self.ticket_repo.get_by_id(normalized_ticket_id)
+        try:
+            ticket = self.ticket_repo.get_by_id(normalized_ticket_id)
+            logger.debug(
+                "Ticket fetched",
+                extra=extra_(
+                    operation="svc_get_ticket",
+                    status="success" if ticket else "skipped",
+                    ticket_id=ticket_id,
+                ),
+            )
+            return ticket
+        except Exception:
+            logger.exception(
+                "Failed to fetch ticket",
+                extra=extra_(operation="svc_get_ticket", status="failure", ticket_id=ticket_id),
+            )
+            raise
 
     def get_ticket_by_reference(self, ticket_ref: str) -> Optional[TicketOut]:
         normalized_ticket_ref = self._safe_str(ticket_ref)
         self._validate_non_empty(normalized_ticket_ref, "ticket_id")
-        return self.ticket_repo.get_by_reference(normalized_ticket_ref)
+        try:
+            ticket = self.ticket_repo.get_by_reference(normalized_ticket_ref)
+            logger.debug(
+                "Ticket fetched by reference",
+                extra=extra_(
+                    operation="svc_get_ticket_ref",
+                    status="success" if ticket else "skipped",
+                    ticket_ref=ticket_ref,
+                ),
+            )
+            return ticket
+        except Exception:
+            logger.exception(
+                "Failed to fetch ticket by reference",
+                extra=extra_(
+                    operation="svc_get_ticket_ref",
+                    status="failure",
+                    ticket_ref=ticket_ref,
+                ),
+            )
+            raise
 
     def list_tickets(
         self,
@@ -27,13 +74,37 @@ class TicketService(BaseTicketService):
         status: str | None = None,
     ) -> tuple[list[TicketOut], int]:
         offset = (page - 1) * limit
-        items = self.ticket_repo.list_tickets(
-            status=status,
-            offset=offset,
-            limit=limit,
-        )
-        total = self.ticket_repo.count_tickets(status=status)
-        return items, total
+        try:
+            items = self.ticket_repo.list_tickets(
+                status=status,
+                offset=offset,
+                limit=limit,
+            )
+            total = self.ticket_repo.count_tickets(status=status)
+            logger.debug(
+                "Tickets listed",
+                extra=extra_(
+                    operation="svc_list_tickets",
+                    status="success",
+                    status_filter=status,
+                    page=page,
+                    limit=limit,
+                    total=total,
+                ),
+            )
+            return items, total
+        except Exception:
+            logger.exception(
+                "Failed to list tickets",
+                extra=extra_(
+                    operation="svc_list_tickets",
+                    status="failure",
+                    status_filter=status,
+                    page=page,
+                    limit=limit,
+                ),
+            )
+            raise
 
     def get_pending_tickets(self) -> list[TicketOut]:
         return self.ticket_repo.get_all_pending()
@@ -45,10 +116,40 @@ class TicketService(BaseTicketService):
     ) -> Optional[TicketOut]:
         ticket = self.get_ticket_by_reference(ticket_ref)
         if ticket is None:
+            logger.warning(
+                "Ticket not found for status update",
+                extra=extra_(
+                    operation="svc_update_ticket_status",
+                    status="skipped",
+                    ticket_ref=ticket_ref,
+                    new_status=status,
+                ),
+            )
             return None
 
-        self.ticket_repo.update_status(ticket.id, status)
-        return self.get_ticket_by_reference(ticket.id)
+        try:
+            self.ticket_repo.update_status(ticket.id, status)
+            logger.info(
+                "Ticket status updated",
+                extra=extra_(
+                    operation="svc_update_ticket_status",
+                    status="success",
+                    ticket_ref=ticket_ref,
+                    new_status=status,
+                ),
+            )
+            return self.get_ticket_by_reference(ticket.id)
+        except Exception:
+            logger.exception(
+                "Failed to update ticket status",
+                extra=extra_(
+                    operation="svc_update_ticket_status",
+                    status="failure",
+                    ticket_ref=ticket_ref,
+                    new_status=status,
+                ),
+            )
+            raise
 
     def mark_processing(self, ticket_id: str) -> None:
         normalized_ticket_id = self._safe_str(ticket_id)

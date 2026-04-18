@@ -1,11 +1,22 @@
 from typing import Optional
 
+import logging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.logging import AppLoggerAdapter, LogCategory, LogLayer, extra_
 from app.models.models import Customer
 from app.repositories.base import BaseCustomerRepo
 from app.schemas.repo import CustomerOut
+
+logger = AppLoggerAdapter(
+    logging.getLogger(__name__),
+    {
+        "layer": LogLayer.DB,
+        "category": LogCategory.DATABASE,
+        "component": __name__,
+    },
+)
 
 
 def _to_customer_out(customer: Customer) -> CustomerOut:
@@ -22,15 +33,45 @@ class CustomerRepo(BaseCustomerRepo):
         super().__init__(db)
 
     def get_by_email(self, email: str) -> Optional[CustomerOut]:
-        customer = self.db.scalar(select(Customer).where(Customer.email == email))
-        if customer is None:
-            return None
-        return _to_customer_out(customer)
+        try:
+            customer = self.db.scalar(select(Customer).where(Customer.email == email))
+            if customer is None:
+                logger.debug(
+                    "Customer not found by email",
+                    extra=extra_(operation="repo_get_customer", status="skipped", email=email),
+                )
+                return None
+            return _to_customer_out(customer)
+        except Exception:
+            logger.exception(
+                "Failed to fetch customer by email",
+                extra=extra_(operation="repo_get_customer", status="failure", email=email),
+            )
+            raise
 
     def get_by_external_id(self, external_id: str) -> Optional[CustomerOut]:
-        customer = self.db.scalar(
-            select(Customer).where(Customer.external_customer_id == external_id)
-        )
-        if customer is None:
-            return None
-        return _to_customer_out(customer)
+        try:
+            customer = self.db.scalar(
+                select(Customer).where(Customer.external_customer_id == external_id)
+            )
+            if customer is None:
+                logger.debug(
+                    "Customer not found by external id",
+                    extra=extra_(
+                        operation="repo_get_customer",
+                        status="skipped",
+                        customer_external_id=external_id,
+                    ),
+                )
+                return None
+            return _to_customer_out(customer)
+        except Exception:
+            logger.exception(
+                "Failed to fetch customer by external id",
+                extra=extra_(
+                    operation="repo_get_customer",
+                    status="failure",
+                    customer_external_id=external_id,
+                ),
+            )
+            raise

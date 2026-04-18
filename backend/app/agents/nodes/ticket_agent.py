@@ -13,7 +13,7 @@ from app.agents.tools.registry import ticket_agent_tools, ticket_agent_tools_map
 from app.agents.utils.utils import get_chat_llm
 from app.clients.pg import get_pgdb
 from app.core.config import envs
-from app.core.logging import AppLoggerAdapter, LogCategory, LogLayer
+from app.core.logging import AppLoggerAdapter, LogCategory, LogLayer, extra_
 from app.repositories.agent import AgentStepRepo, ToolExecutionRepo
 
 logger = AppLoggerAdapter(
@@ -60,6 +60,16 @@ async def reasoning_node(state: TicketAgentState) -> TicketAgentState:
 
     history = list(state.get("messages") or [])
     response = await llm.ainvoke([SystemMessage(content=prompt), *history])
+    logger.debug(
+        "LLM reasoning completed",
+        extra=extra_(
+            operation="agent_reasoning",
+            status="success",
+            run_id=state.get("run_id"),
+            ticket_id=state.get("ticket", {}).get("ticket_id"),
+            tool_calls_planned=len(response.tool_calls or []),
+        ),
+    )
 
     planned = [
         {"name": c.get("name"), "args": c.get("args")}
@@ -90,7 +100,15 @@ async def reasoning_node(state: TicketAgentState) -> TicketAgentState:
         step_id = await _run_sync_with_pg(_op)
     except Exception:
         # Audit failures should never crash the agent.
-        logger.exception("Failed to write reasoning step audit")
+        logger.exception(
+            "Failed to write reasoning step audit",
+            extra=extra_(
+                operation="audit_reasoning",
+                status="failure",
+                run_id=state.get("run_id"),
+                ticket_id=state.get("ticket", {}).get("ticket_id"),
+            ),
+        )
 
     return {
         "messages": [response],
@@ -112,6 +130,17 @@ async def tool_node(state: TicketAgentState) -> TicketAgentState:
         name = tool_call["name"]
         args = tool_call.get("args") or {}
         tool_calls_made += 1
+        logger.debug(
+            "Tool call requested",
+            extra=extra_(
+                operation="tool_call",
+                status="start",
+                run_id=state.get("run_id"),
+                ticket_id=state.get("ticket", {}).get("ticket_id"),
+                tool_name=name,
+                attempt_max=envs.AGENT_MAX_RETRIES,
+            ),
+        )
 
         # Retry budget with exponential backoff.
         last_err: str | None = None
@@ -136,6 +165,18 @@ async def tool_node(state: TicketAgentState) -> TicketAgentState:
             except Exception as e:
                 last_exc = e
                 last_err = f"{type(e).__name__}: {e}"
+                logger.warning(
+                    "Tool call attempt failed",
+                    extra=extra_(
+                        operation="tool_call",
+                        status="retrying" if attempt < envs.AGENT_MAX_RETRIES else "failure",
+                        run_id=state.get("run_id"),
+                        ticket_id=state.get("ticket", {}).get("ticket_id"),
+                        tool_name=name,
+                        attempt=attempt,
+                        error_type=type(e).__name__,
+                    ),
+                )
                 if attempt >= envs.AGENT_MAX_RETRIES:
                     result = {"error": last_err}
                     break
@@ -164,7 +205,28 @@ async def tool_node(state: TicketAgentState) -> TicketAgentState:
             try:
                 await _run_sync_with_pg(_op)
             except Exception:
-                logger.exception("Failed to write tool execution audit")
+                logger.exception(
+                    "Failed to write tool execution audit",
+                    extra=extra_(
+                        operation="audit_tool",
+                        status="failure",
+                        run_id=state.get("run_id"),
+                        ticket_id=state.get("ticket", {}).get("ticket_id"),
+                        tool_name=name,
+                    ),
+                )
+
+        logger.info(
+            "Tool call completed",
+            extra=extra_(
+                operation="tool_call",
+                status="success" if status == "success" else "failure",
+                run_id=state.get("run_id"),
+                ticket_id=state.get("ticket", {}).get("ticket_id"),
+                tool_name=name,
+                tool_status=status,
+            ),
+        )
 
         outputs.append(
             ToolMessage(

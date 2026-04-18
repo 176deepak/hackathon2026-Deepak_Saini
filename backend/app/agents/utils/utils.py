@@ -3,6 +3,17 @@ from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.core.config import envs
+import logging
+from app.core.logging import AppLoggerAdapter, LogCategory, LogLayer, extra_
+
+logger = AppLoggerAdapter(
+    logging.getLogger(__name__),
+    {
+        "layer": LogLayer.AGENT,
+        "category": LogCategory.AGENT,
+        "component": __name__,
+    },
+)
 
 
 def get_chat_llm(
@@ -24,6 +35,10 @@ def get_chat_llm(
     """
     match provider:
         case "openai":
+            logger.debug(
+                "Creating OpenAI chat model",
+                extra=extra_(operation="get_chat_llm", status="start", provider="openai", model=model),
+            )
             model = ChatOpenAI(
                 api_key=envs.OPENAI_API_KEY,
                 temperature=temperature,
@@ -32,6 +47,10 @@ def get_chat_llm(
             )
 
         case "google":
+            logger.debug(
+                "Creating Google chat model",
+                extra=extra_(operation="get_chat_llm", status="start", provider="google", model=model),
+            )
             model = ChatGoogleGenerativeAI(
                 api_key=envs.GOOGLE_API_KEY,
                 model=model,
@@ -40,6 +59,10 @@ def get_chat_llm(
             )
 
         case "groq":
+            logger.debug(
+                "Creating Groq chat model",
+                extra=extra_(operation="get_chat_llm", status="start", provider="groq", model=model),
+            )
             model = ChatGroq(
                 api_key=envs.GROQ_API_KEY,
                 temperature=temperature,
@@ -48,6 +71,10 @@ def get_chat_llm(
             )
 
         case _:
+            logger.warning(
+                "Unknown LLM provider, defaulting to OpenAI",
+                extra=extra_(operation="get_chat_llm", status="warning", provider=provider),
+            )
             model = ChatOpenAI(
                 api_key=envs.OPENAI_API_KEY,
                 temperature=temperature,
@@ -55,4 +82,14 @@ def get_chat_llm(
                 model="gpt-4o-2024-08-06"
             )
 
+    logger.info(
+        "Chat model created",
+        extra=extra_(
+            operation="get_chat_llm",
+            status="success",
+            provider=provider,
+            streaming=streaming,
+            temperature=temperature,
+        ),
+    )
     return model
