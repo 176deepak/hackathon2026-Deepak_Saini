@@ -4,14 +4,12 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import envs
-from app.core.logging import (
-    LogCategory, LogEvent, LogLayer, LogStatus, AppLoggerAdapter, extra_,
-)
+from app.core.logging import LogCategory, LogLayer, AppLoggerAdapter
 
 logger = AppLoggerAdapter(
     logging.getLogger(__name__),
     {
-        "layer": LogLayer.CLIENT,
+        "layer": LogLayer.DB,
         "category": LogCategory.DATABASE,
         "component": __name__,
     },
@@ -47,27 +45,13 @@ async def init_postgres() -> None:
 
 async def get_pgdb() -> AsyncGenerator[AsyncSession | Any, Any]:
     async with AsyncSessionLocal() as session:
-        logger.debug(
-            "PostgreSQL session acquired",
-            extra=extra_(
-                operation="get_pgdb",
-                status=LogStatus.ACQUIRED,
-                event=LogEvent.DB_QUERY,
-            ),
-        )
+        logger.debug("PostgreSQL session acquired")
         
         try:
             yield session
         
         finally:
-            logger.info(
-                "PostgreSQL session released",
-                extra=extra_(
-                    operation="get_pgdb",
-                    status=LogStatus.RELEASED,
-                    event=LogEvent.DB_QUERY,
-                ),
-            )
+            logger.info("PostgreSQL session released")
 
 
 async def close_postgres() -> None:

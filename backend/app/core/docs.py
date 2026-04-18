@@ -5,17 +5,14 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import FileResponse
 
-from app.utils import current_operation
-from .logging import (
-    LogCategory, LogEvent, LogLayer, LogStatus, AppLoggerAdapter, extra_,
-)
+from .logging import LogCategory, LogLayer, AppLoggerAdapter, extra_
 from .security import docs_basic_auth
 
 logger = AppLoggerAdapter(
     logging.getLogger(__name__),
     {
-        "layer": LogLayer.CORE,
-        "category": LogCategory.DOCS,
+        "layer": LogLayer.API,
+        "category": LogCategory.API,
         "component": __name__,
     },
 )
@@ -25,16 +22,7 @@ DOCS_FAVICON_PATH = Path("assets") / "icon.png"
 
 
 def setup_protected_docs(app: FastAPI) -> None:
-    operation = current_operation()
-
-    logger.debug(
-        "Registering protected documentation routes",
-        extra=extra_(
-            operation=operation,
-            status=LogStatus.START,
-            event=LogEvent.DOCS_ROUTES_REGISTER,
-        ),
-    )
+    logger.debug("Registering protected documentation routes")
 
     @app.get(DOCS_FAVICON_URL, include_in_schema=False)
     async def docs_favicon():
@@ -48,17 +36,12 @@ def setup_protected_docs(app: FastAPI) -> None:
         request: Request,
         _=Depends(docs_basic_auth),
     ):
-        operation = current_operation()
-
         client_ip = request.client.host if request.client else "unknown"
         request_id = getattr(request.state, "request_id", None)
 
         logger.info(
             "Serving Swagger UI",
             extra=extra_(
-                operation=operation,
-                status=LogStatus.SUCCESS,
-                event=LogEvent.DOCS_ACCESS,
                 method=request.method,
                 path=request.url.path,
                 client_ip=client_ip,
@@ -77,16 +60,12 @@ def setup_protected_docs(app: FastAPI) -> None:
         request: Request,
         _=Depends(docs_basic_auth),
     ):
-        operation = current_operation()
         client_ip = request.client.host if request.client else "unknown"
         request_id = getattr(request.state, "request_id", None)
 
         logger.info(
             "Serving ReDoc UI",
             extra=extra_(
-                operation=operation,
-                status=LogStatus.SUCCESS,
-                event=LogEvent.DOCS_ACCESS,
                 method=request.method,
                 path=request.url.path,
                 client_ip=client_ip,
@@ -105,16 +84,12 @@ def setup_protected_docs(app: FastAPI) -> None:
         request: Request,
         _=Depends(docs_basic_auth),
     ):
-        operation = current_operation()
         client_ip = request.client.host if request.client else "unknown"
         request_id = getattr(request.state, "request_id", None)
 
         logger.info(
             "Serving OpenAPI schema",
             extra=extra_(
-                operation=operation,
-                status=LogStatus.SUCCESS,
-                event=LogEvent.DOCS_ACCESS,
                 method=request.method,
                 path=request.url.path,
                 client_ip=client_ip,
@@ -124,11 +99,4 @@ def setup_protected_docs(app: FastAPI) -> None:
 
         return app.openapi()
 
-    logger.info(
-        "Protected documentation routes registered",
-        extra=extra_(
-            operation=operation,
-            status=LogStatus.SUCCESS,
-            event=LogEvent.DOCS_ROUTES_REGISTER,
-        ),
-    )
+    logger.info("Protected documentation routes registered")

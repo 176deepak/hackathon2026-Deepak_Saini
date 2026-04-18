@@ -8,7 +8,6 @@ from app.core.logging import (
     LogCategory, LogEvent, LogLayer, LogStatus, AppLoggerAdapter, extra_,
 )
 from app.schemas.api import RESTResponse
-from app.utils import current_operation
 
 logger = AppLoggerAdapter(
     logging.getLogger(__name__),
@@ -23,7 +22,6 @@ logger = AppLoggerAdapter(
 async def http_exception_handler(
     request: Request, exc: StarletteHTTPException
 ) -> Response:
-    operation = current_operation()
     client_ip = request.client.host if request.client else "unknown"
     request_id = getattr(request.state, "request_id", None)
     is_docs_endpoint = request.url.path in ["/docs", "/redoc", "/openapi.json"]
@@ -32,9 +30,6 @@ async def http_exception_handler(
         logger.warning(
             "Unauthorized documentation access",
             extra=extra_(
-                operation=operation,
-                status=LogStatus.FAILURE,
-                event=LogEvent.HTTP_EXCEPTION,
                 http_status=exc.status_code,
                 method=request.method,
                 path=request.url.path,
@@ -52,9 +47,6 @@ async def http_exception_handler(
             logger.warning(
                 "Failed to normalize exception headers",
                 extra=extra_(
-                    operation=operation,
-                    status=LogStatus.FAILURE,
-                    event=LogEvent.HTTP_EXCEPTION,
                     http_status=exc.status_code,
                     method=request.method,
                     path=request.url.path,
@@ -81,9 +73,6 @@ async def http_exception_handler(
         log_level,
         "HTTP exception handled",
         extra=extra_(
-            operation=operation,
-            status=LogStatus.FAILURE,
-            event=LogEvent.HTTP_EXCEPTION,
             http_status=exc.status_code,
             method=request.method,
             path=request.url.path,
@@ -107,16 +96,12 @@ async def unhandled_exception_handler(
     request: Request,
     exc: Exception,
 ) -> JSONResponse:
-    operation = current_operation()
     request_id = getattr(request.state, "request_id", None)
     client_ip = request.client.host if request.client else "unknown"
 
     logger.exception(
         "Unhandled exception during request processing",
         extra=extra_(
-            operation=operation,
-            status=LogStatus.FAILURE,
-            event=LogEvent.UNHANDLED_EXCEPTION,
             method=request.method,
             path=request.url.path,
             client_ip=client_ip,

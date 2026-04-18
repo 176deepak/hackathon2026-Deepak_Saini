@@ -9,17 +9,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.schemas.api import RESTResponse
-from app.utils import current_operation
 from .config import envs
-from .logging import (
-    LogCategory, LogEvent, LogLayer, LogStatus, AppLoggerAdapter, extra_,
-)
+from .logging import LogCategory, LogLayer, AppLoggerAdapter, extra_
 from .request_context import reset_request_id, set_request_id
 
 logger = AppLoggerAdapter(
     logging.getLogger(__name__),
     {
-        "layer": LogLayer.CORE,
+        "layer": LogLayer.MIDDLEWARE,
         "category": LogCategory.MIDDLEWARE,
         "component": __name__,
     },
@@ -28,7 +25,6 @@ logger = AppLoggerAdapter(
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        operation = "request_lifecycle"
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
         request_id_token = set_request_id(request_id)
@@ -40,9 +36,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         logger.info(
             "Incoming request",
             extra=extra_(
-                operation=operation,
-                event=LogEvent.REQUEST_START,
-                status=LogStatus.START,
                 request_id=request_id,
                 method=request.method,
                 path=request.url.path,
@@ -57,9 +50,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             logger.info(
                 "Request completed",
                 extra=extra_(
-                    operation=operation,
-                    event=LogEvent.REQUEST_COMPLETE,
-                    status=LogStatus.SUCCESS,
                     request_id=request_id,
                     method=request.method,
                     path=request.url.path,
@@ -75,9 +65,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             logger.exception(
                 "Request failed",
                 extra=extra_(
-                    operation=operation,
-                    event=LogEvent.REQUEST_FAILED,
-                    status=LogStatus.FAILURE,
                     request_id=request_id,
                     method=request.method,
                     path=request.url.path,
@@ -101,9 +88,6 @@ async def custom_maintenance_response(request: Request) -> JSONResponse:
     logger.warning(
         "Request blocked due to maintenance mode",
         extra=extra_(
-            operation="maintenance_block",
-            event=LogEvent.REQUEST_BLOCKED,
-            status=LogStatus.BLOCKED,
             request_id=request_id,
             method=request.method,
             path=request.url.path,
@@ -125,41 +109,16 @@ async def custom_maintenance_response(request: Request) -> JSONResponse:
 
 
 def setup_middleware(app: FastAPI) -> None:
-    operation = current_operation()
-
-    logger.debug(
-        "Middleware setup initiated",
-        extra=extra_(
-            operation=operation,
-            event=LogEvent.MIDDLEWARE_SETUP,
-            status=LogStatus.START,
-        ),
-    )
-
     app.add_middleware(RequestLoggingMiddleware)
 
-    logger.info(
-        "RequestLoggingMiddleware registered",
-        extra=extra_(
-            operation=operation,
-            event=LogEvent.MIDDLEWARE_REGISTER,
-            status=LogStatus.SUCCESS,
-        ),
-    )
+    logger.info("RequestLoggingMiddleware registered")
 
     app.add_middleware(
         MaintenanceModeMiddleware,
         response_handler=custom_maintenance_response,
     )
 
-    logger.info(
-        "MaintenanceModeMiddleware registered",
-        extra=extra_(
-            operation=operation,
-            event=LogEvent.MIDDLEWARE_REGISTER,
-            status=LogStatus.SUCCESS,
-        ),
-    )
+    logger.info("MaintenanceModeMiddleware registered")
 
     allowed_origins = envs.cors_allowed_origins
 
@@ -173,20 +132,4 @@ def setup_middleware(app: FastAPI) -> None:
         allow_headers=["*"],
     )
 
-    logger.info(
-        "CORSMiddleware registered",
-        extra=extra_(
-            operation=operation,
-            event=LogEvent.MIDDLEWARE_REGISTER,
-            status=LogStatus.SUCCESS,
-        ),
-    )
-
-    logger.info(
-        "Middleware setup completed",
-        extra=extra_(
-            operation=operation,
-            event=LogEvent.MIDDLEWARE_SETUP,
-            status=LogStatus.SUCCESS,
-        ),
-    )
+    logger.info("CORSMiddleware registered")

@@ -4,9 +4,8 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import (
     HTTPAuthorizationCredentials, HTTPBasic, HTTPBasicCredentials, HTTPBearer
 )
-
-from .utils import decode_jwt
 from .config import envs
+from .utils import decode_jwt
 
 
 security = HTTPBasic(auto_error=True)
@@ -16,12 +15,10 @@ def docs_basic_auth(
     credentials: HTTPBasicCredentials = Depends(security),
 ):
     correct_username = secrets.compare_digest(
-        credentials.username,
-        envs.APP_DOCS_USERNAME,
+        credentials.username, envs.APP_DOCS_USERNAME,
     )
     correct_password = secrets.compare_digest(
-        credentials.password,
-        envs.APP_DOCS_PASSWORD,
+        credentials.password, envs.APP_DOCS_PASSWORD,
     )
 
     if not (correct_username and correct_password):

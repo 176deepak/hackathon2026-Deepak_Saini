@@ -52,19 +52,29 @@ class LogStatus:
     
 
 class LogLayer:
+    HANDLER = "handler"
     AGENT = "agent"
     TOOL = "tool"
     SERVICE = "service"
     DB = "db"
     API = "api"
+    EXCEPTION = "exception"
+    LIFESPAN = "lifespan"
+    MIDDLEWARE = "middleware"
+    ROUTER = "router"
     
     
 class LogCategory:
+    HANDLER = "handler"
     AGENT = "agent"
     TOOL_EXECUTION = "tool_execution"
     POLICY = "policy"
     DATABASE = "database"
     API = "api"
+    EXCEPTION = "exception"
+    LIFESPAN = "lifespan"
+    MIDDLEWARE = "middleware"
+    ROUTER = "router"
     
     
 class LogEvent:
