@@ -91,7 +91,9 @@ class SystemServiceExecutor:
         self.service = SystemService()
 
     async def check_health(self):
-        return await self.db.run_sync(lambda session: self.service.check_health(db=session))
+        return await self.db.run_sync(
+            lambda session: self.service.check_health(db=session)
+        )
 
     async def ping(self):
         return self.service.ping()

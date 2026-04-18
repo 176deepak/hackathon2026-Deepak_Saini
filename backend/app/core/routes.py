@@ -2,7 +2,6 @@ import logging
 from fastapi import FastAPI
 
 from app.apis import rest_router
-
 from .logging import LogCategory, LogLayer, AppLoggerAdapter
 
 logger = AppLoggerAdapter(

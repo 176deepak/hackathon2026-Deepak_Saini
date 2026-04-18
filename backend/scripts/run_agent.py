@@ -6,7 +6,6 @@ from app.services.agent import AgentRunner
 async def main() -> None:
     runner = AgentRunner()
 
-    # Keep ticking until there are no more pending tickets claimed.
     total = 0
     while True:
         res = await runner.run_tick()

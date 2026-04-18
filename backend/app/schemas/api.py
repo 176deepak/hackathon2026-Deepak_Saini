@@ -109,3 +109,9 @@ class SystemHealthData(BaseModel):
 
 class SystemPingData(BaseModel):
     message: str
+
+
+class AuthTokenData(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int

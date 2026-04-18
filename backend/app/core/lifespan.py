@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.clients import init_postgres, init_redis
 from app.core.config import envs
-from .logging import AppLoggerAdapter, LogCategory, LogLayer
+from .logging import AppLoggerAdapter, LogCategory, LogLayer, extra_
 from .scheduler import scheduler
 
 logger = AppLoggerAdapter(
@@ -54,9 +54,9 @@ async def lifespan(app: FastAPI):
                 max_instances=1,
                 coalesce=True,
             )
-            logger.info("Agent autorun scheduled", extra={
-                "seconds": envs.AGENT_POLL_SECONDS
-            })
+            logger.info("Agent autorun scheduled", extra=extra_(
+                seconds=envs.AGENT_POLL_SECONDS
+            ))
 
         else:
             logger.warning("Scheduler already running")

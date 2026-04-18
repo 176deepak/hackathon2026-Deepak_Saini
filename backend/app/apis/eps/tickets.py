@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Path, Query, status
+from fastapi import APIRouter, HTTPException, Path, Query, status, Depends
 
 from app.core.dependencies import TicketServiceDep, TicketStatusFilter
+from app.core.security import JWTBearer
 from app.schemas.api import (
     RESTResponse, TicketDetailData, TicketListData, TicketStatusData,
     TicketStatusUpdateRequest, TicketSummary,
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/tickets", tags=["Tickets"])
 
 @router.get(
     "/",
+    dependencies=[Depends(JWTBearer())],
     response_model=RESTResponse[TicketListData],
     summary="List tickets"
 )
@@ -61,6 +63,7 @@ async def list_tickets(
 
 @router.get(
     "/{ticket_id}",
+    dependencies=[Depends(JWTBearer())],
     response_model=RESTResponse[TicketDetailData],
     summary="Get ticket details"
 )
@@ -88,6 +91,7 @@ async def get_ticket(
 
 @router.get(
     "/{ticket_id}/status",
+    dependencies=[Depends(JWTBearer())],
     response_model=RESTResponse[TicketStatusData],
     summary="Get ticket status"
 )
@@ -112,6 +116,7 @@ async def get_ticket_status(
 
 @router.patch(
     "/{ticket_id}/status",
+    dependencies=[Depends(JWTBearer())],
     response_model=RESTResponse[TicketStatusData],
     summary="Update ticket status"
 )

@@ -1,9 +1,6 @@
 import logging
-from pathlib import Path
-
 from fastapi import Depends, FastAPI, Request
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
-from fastapi.responses import FileResponse
 
 from .logging import LogCategory, LogLayer, AppLoggerAdapter, extra_
 from .security import docs_basic_auth

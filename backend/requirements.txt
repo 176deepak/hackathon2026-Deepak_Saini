@@ -25,3 +25,7 @@ chromadb
 redis
 
 jinja2
+
+# Auth / tokens / password hashing
+PyJWT
+passlib[bcrypt]

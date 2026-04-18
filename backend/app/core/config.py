@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class ENV(BaseSettings):
     ENVIRONMENT: str = Field("local", alias="ENVIRONMENT")
 
+    APP_NAME: str = Field("Resolvr", alias="APP_NAME")
     APP_VERSION: str = Field(..., alias="APP_VERSION")
     APP_HOST: str = Field(..., alias="APP_HOST")
     APP_PORT: int = Field(..., alias="APP_PORT")
@@ -19,6 +20,10 @@ class ENV(BaseSettings):
     APP_BASE_URL: str = Field(..., alias="APP_BASE_URL")
     APP_DOCS_USERNAME: str = Field(..., alias="APP_DOCS_USERNAME")
     APP_DOCS_PASSWORD: str = Field(..., alias="APP_DOCS_PASSWORD")
+
+    # Frontend/dashboard auth. Defaults to docs credentials if left blank.
+    APP_AUTH_USERNAME: str = Field("", alias="APP_AUTH_USERNAME")
+    APP_AUTH_PASSWORD: str = Field("", alias="APP_AUTH_PASSWORD")
     APP_SUPPORT_EMAIL: str = Field(..., alias="APP_SUPPORT_EMAIL")
     APP_SCHEDULER_MAX_INSTANCE: int = Field(..., alias="APP_SCHEDULER_MAX_INSTANCE")
     APP_APIS_VERSION: int = Field(..., alias="APP_APIS_VERSION")
@@ -59,7 +64,7 @@ class ENV(BaseSettings):
     VECTOR_DB_NAME: str = Field("shopwave_kb", alias="VECTOR_DB_NAME")
     CHUNK_SIZE: int = Field(800, alias="CHUNK_SIZE")
     CHUNK_OVERLAP: int = Field(120, alias="CHUNK_OVERLAP")
-    KNOWLEDGE_BASE_GDRIVE_FILE_ID: str = Field("", alias="KNOWLEDGE_BASE_GDRIVE_FILE_ID")
+    KNOWLEDGE_BASE_GDRIVE_FILE_ID: str=Field("", alias="KNOWLEDGE_BASE_GDRIVE_FILE_ID")
     EMBEDDING_MODEL: str = Field("models/embedding-001", alias="EMBEDDING_MODEL")
     NO_TOP_K_CHUNKS: int = Field(8, alias="NO_TOP_K_CHUNKS")
     NO_TOP_N_CHUNKS: int = Field(4, alias="NO_TOP_N_CHUNKS")
@@ -67,7 +72,6 @@ class ENV(BaseSettings):
     @computed_field
     @property
     def redis_uri(self) -> str:
-        # Prefer plain redis locally; use TLS (rediss) elsewhere.
         if self.ENVIRONMENT == "local" or self.REDIS_HOST == "host.docker.internal":
             return (
                 f"redis://{self.REDIS_USERNAME}:{self.REDIS_PASSWORD}"

@@ -4,9 +4,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
-from app.core.logging import (
-    LogCategory, LogEvent, LogLayer, LogStatus, AppLoggerAdapter, extra_,
-)
+from app.core.logging import LogCategory, LogLayer, AppLoggerAdapter, extra_
 from app.schemas.api import RESTResponse
 
 logger = AppLoggerAdapter(

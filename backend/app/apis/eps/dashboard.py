@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, status, Depends
 
 from app.core.dependencies import DashboardServiceDep
+from app.core.security import JWTBearer
 from app.schemas.api import (
     DashboardMetricsData, DashboardRecentActivityData, DashboardRecentActivityItem,
     RESTResponse,
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 @router.get(
     "/metrics",
+    dependencies=[Depends(JWTBearer())],
     response_model=RESTResponse[DashboardMetricsData],
     summary="Get dashboard metrics"
 )
@@ -34,6 +36,7 @@ async def get_metrics(dashboard_service: DashboardServiceDep):
 
 @router.get(
     "/recent-activity",
+    dependencies=[Depends(JWTBearer())],
     response_model=RESTResponse[DashboardRecentActivityData],
     summary="Get recent activity"
 )

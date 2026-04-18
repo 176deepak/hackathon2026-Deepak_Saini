@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Path, status
+from fastapi import APIRouter, HTTPException, Path, status, Depends
 
 from app.core.dependencies import AuditServiceDep
 from app.schemas.api import (
     AuditLogData, AuditRunItem, AuditStepItem, AuditToolCallItem, RESTResponse
 )
+from app.core.security import JWTBearer
 from ..docs import AUDIT_API_DOC
 
 
@@ -12,6 +13,7 @@ router = APIRouter(prefix="/audit", tags=["Audit Logs"])
 
 @router.get(
     "/{ticket_id}",
+    dependencies=[Depends(JWTBearer())],
     response_model=RESTResponse[AuditLogData],
     summary="Get ticket audit timeline",
 )
