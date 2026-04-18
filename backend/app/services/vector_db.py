@@ -46,7 +46,7 @@ class ChunkCreationService(BaseChunkCreationService):
             elif ext == ".pdf":
                 logger.debug("Loading PDF file with PyMuPDFLoader")
                 docs = PyMuPDFLoader(filepath).load()
-            elif ext == ".docx":
+            elif ext == ".docx": 
                 logger.debug("Loading DOCX file with Docx2txtLoader")
                 docs = Docx2txtLoader(filepath).load()
             elif ext == ".doc":
@@ -63,15 +63,10 @@ class ChunkCreationService(BaseChunkCreationService):
             raise
         
     def create_chunks(self, filepath, chunk_size, overlapping):
-        logger.info(
-            f"""Creating chunks from {
-                filepath
-            } - chunk_size: {
-                chunk_size
-            }, overlap: {
-                overlapping
-            }"""
-        )
+        logger.info((
+            f"Creating chunks from {filepath} - chunk_size: {chunk_size}, "
+            f"overlap: {overlapping}"
+        ))
         semantic_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=overlapping,
@@ -149,11 +144,10 @@ class ChromaVectorIndexService:
         )
 
     async def update_index(self, chunks:list, update_source:str):
-        logger.info(
-            f"""Updating ChromaDB index with {
-                len(chunks)
-            } chunks from source: {update_source}"""
-        )
+        logger.info((
+            f"Updating ChromaDB index with {len(chunks)} "
+            f"chunks from source: {update_source}"
+        ))
         try:
             current_count = self.cm_index.count()
             logger.debug(f"Current collection count: {current_count}")

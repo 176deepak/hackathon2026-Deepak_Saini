@@ -125,6 +125,8 @@ class Ticket(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
     resolved_at = Column(DateTime)
 
+    expected_action = Column(String)
+
     customer = relationship("Customer")
 
 

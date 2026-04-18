@@ -20,8 +20,6 @@ def should_continue(state: TicketAgentState):
         logger.debug(
             "Agent decided to end (no tool calls)",
             extra=extra_(
-                operation="agent_should_continue",
-                status="success",
                 run_id=state.get("run_id"),
                 ticket_id=state.get("ticket", {}).get("ticket_id"),
             ),
@@ -32,8 +30,6 @@ def should_continue(state: TicketAgentState):
     logger.debug(
         "Agent decided to continue (tool calls present)",
         extra=extra_(
-            operation="agent_should_continue",
-            status="success",
             run_id=state.get("run_id"),
             ticket_id=state.get("ticket", {}).get("ticket_id"),
             tool_calls=len(messages[-1].tool_calls or []),

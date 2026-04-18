@@ -37,7 +37,7 @@ def get_chat_llm(
         case "openai":
             logger.debug(
                 "Creating OpenAI chat model",
-                extra=extra_(operation="get_chat_llm", status="start", provider="openai", model=model),
+                extra=extra_(provider="openai", model=model),
             )
             model = ChatOpenAI(
                 api_key=envs.OPENAI_API_KEY,
@@ -49,7 +49,7 @@ def get_chat_llm(
         case "google":
             logger.debug(
                 "Creating Google chat model",
-                extra=extra_(operation="get_chat_llm", status="start", provider="google", model=model),
+                extra=extra_(provider="google", model=model),
             )
             model = ChatGoogleGenerativeAI(
                 api_key=envs.GOOGLE_API_KEY,
@@ -61,7 +61,7 @@ def get_chat_llm(
         case "groq":
             logger.debug(
                 "Creating Groq chat model",
-                extra=extra_(operation="get_chat_llm", status="start", provider="groq", model=model),
+                extra=extra_(provider="groq", model=model),
             )
             model = ChatGroq(
                 api_key=envs.GROQ_API_KEY,
@@ -73,7 +73,7 @@ def get_chat_llm(
         case _:
             logger.warning(
                 "Unknown LLM provider, defaulting to OpenAI",
-                extra=extra_(operation="get_chat_llm", status="warning", provider=provider),
+                extra=extra_(provider=provider),
             )
             model = ChatOpenAI(
                 api_key=envs.OPENAI_API_KEY,
@@ -84,12 +84,6 @@ def get_chat_llm(
 
     logger.info(
         "Chat model created",
-        extra=extra_(
-            operation="get_chat_llm",
-            status="success",
-            provider=provider,
-            streaming=streaming,
-            temperature=temperature,
-        ),
+        extra=extra_(provider=provider, streaming=streaming, temperature=temperature),
     )
     return model

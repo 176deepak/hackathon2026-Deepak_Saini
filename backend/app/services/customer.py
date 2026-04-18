@@ -25,19 +25,12 @@ class CustomerService(BaseCustomerService):
         self._validate_non_empty(normalized_email, "email")
         try:
             customer = self.customer_repo.get_by_email(normalized_email)
-            logger.debug(
-                "Customer fetched",
-                extra=extra_(
-                    operation="svc_get_customer",
-                    status="success" if customer else "skipped",
-                    email=normalized_email,
-                ),
-            )
+            logger.debug("Customer fetched", extra=extra_(email=normalized_email))
             return customer
         except Exception:
             logger.exception(
                 "Failed to fetch customer",
-                extra=extra_(operation="svc_get_customer", status="failure", email=normalized_email),
+                extra=extra_(email=normalized_email),
             )
             raise
 
@@ -48,20 +41,12 @@ class CustomerService(BaseCustomerService):
             customer = self.customer_repo.get_by_external_id(normalized_customer_id)
             logger.debug(
                 "Customer fetched by id",
-                extra=extra_(
-                    operation="svc_get_customer_id",
-                    status="success" if customer else "skipped",
-                    customer_id=normalized_customer_id,
-                ),
+                extra=extra_(customer_id=normalized_customer_id),
             )
             return customer
         except Exception:
             logger.exception(
                 "Failed to fetch customer by id",
-                extra=extra_(
-                    operation="svc_get_customer_id",
-                    status="failure",
-                    customer_id=normalized_customer_id,
-                ),
+                extra=extra_(customer_id=normalized_customer_id),
             )
             raise

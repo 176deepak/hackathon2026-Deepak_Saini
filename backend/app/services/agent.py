@@ -66,8 +66,6 @@ class AgentRunner:
         logger.info(
             "Agent tick started",
             extra=extra_(
-                operation="agent_tick",
-                status="start",
                 poll_seconds=envs.AGENT_POLL_SECONDS,
                 max_concurrency=envs.AGENT_MAX_CONCURRENCY,
                 max_tickets_per_tick=envs.AGENT_MAX_TICKETS_PER_TICK,
@@ -76,10 +74,7 @@ class AgentRunner:
 
         claimed = await self._claim_pending(limit=envs.AGENT_MAX_TICKETS_PER_TICK)
         if not claimed:
-            logger.debug(
-                "No pending tickets claimed",
-                extra=extra_(operation="agent_tick", status="skipped", claimed=0),
-            )
+            logger.debug("No pending tickets claimed")
             return AgentTickResult(claimed=0, succeeded=0, escalated=0, failed=0)
 
         sem = asyncio.Semaphore(envs.AGENT_MAX_CONCURRENCY)
@@ -100,8 +95,6 @@ class AgentRunner:
         logger.info(
             "Agent tick completed",
             extra=extra_(
-                operation="agent_tick",
-                status="success",
                 claimed=len(claimed),
                 resolved=succeeded,
                 escalated=escalated,
@@ -124,28 +117,17 @@ class AgentRunner:
             claimed = await _run_sync_with_pg(_op)
             logger.debug(
                 "Claimed pending tickets",
-                extra=extra_(
-                    operation="claim_pending",
-                    status="success",
-                    limit=limit,
-                    claimed=len(claimed),
-                ),
+                extra=extra_(limit=limit, claimed=len(claimed)),
             )
             return claimed
         except Exception:
-            logger.exception(
-                "Failed to claim pending tickets",
-                extra=extra_(operation="claim_pending", status="failure", limit=limit),
-            )
+            logger.exception("Failed to claim pending tickets")
             raise
 
     async def _process_one(self, ticket) -> str:
         ticket_id = ticket.id  # UUID string
         external_id = ticket.external_ticket_id
-        logger.info(
-            "Processing ticket",
-            extra=extra_(operation="process_ticket", status="start", ticket_id=external_id),
-        )
+        logger.info("Processing ticket", extra=extra_(ticket_id=external_id))
 
         def _create_run(session: Session) -> str:
             return AgentRunRepo(session).create_run(ticket_id=ticket_id).id
@@ -155,9 +137,9 @@ class AgentRunner:
         except Exception:
             logger.exception(
                 "Failed to create agent run",
-                extra=extra_(operation="agent_run", status="failure", ticket_id=external_id),
+                extra=extra_(ticket_id=external_id),
             )
-            # Ticket is currently "processing" since it was claimed; mark failed so it doesn't get stuck.
+
             await self._mark_failed(
                 ticket_uuid=ticket_id,
                 run_id="unknown",
@@ -203,8 +185,6 @@ class AgentRunner:
             logger.info(
                 "Ticket processed",
                 extra=extra_(
-                    operation="process_ticket",
-                    status="success",
                     ticket_id=external_id,
                     run_id=run_id,
                     outcome=outcome,
@@ -215,8 +195,6 @@ class AgentRunner:
             logger.exception(
                 "Agent run failed",
                 extra=extra_(
-                    operation="process_ticket",
-                    status="failure",
                     ticket_id=external_id,
                     run_id=run_id,
                     error_type=type(e).__name__,
@@ -262,22 +240,12 @@ class AgentRunner:
             await _run_sync_with_pg(_op)
             logger.debug(
                 "Finalized ticket/run",
-                extra=extra_(
-                    operation="finalize_ticket",
-                    status="success",
-                    run_id=run_id,
-                    outcome=outcome,
-                ),
+                extra=extra_(run_id=run_id, outcome=outcome),
             )
         except Exception:
             logger.exception(
                 "Failed to finalize ticket/run",
-                extra=extra_(
-                    operation="finalize_ticket",
-                    status="failure",
-                    run_id=run_id,
-                    outcome=outcome,
-                ),
+                extra=extra_(run_id=run_id, outcome=outcome),
             )
             raise
 
@@ -291,10 +259,10 @@ class AgentRunner:
             await _run_sync_with_pg(_op)
             logger.warning(
                 "Marked ticket/run as failed",
-                extra=extra_(operation="mark_failed", status="success", run_id=run_id),
+                extra=extra_(run_id=run_id),
             )
         except Exception:
             logger.exception(
                 "Failed to mark ticket/run as failed",
-                extra=extra_(operation="mark_failed", status="failure", run_id=run_id),
+                extra=extra_(run_id=run_id),
             )

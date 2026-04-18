@@ -26,19 +26,12 @@ class OrderService(BaseOrderService):
         self._validate_non_empty(normalized_order_id, "order_id")
         try:
             order = self.order_repo.get_by_external_id(normalized_order_id)
-            logger.debug(
-                "Order fetched",
-                extra=extra_(
-                    operation="svc_get_order",
-                    status="success" if order else "skipped",
-                    order_id=order_id,
-                ),
-            )
+            logger.debug("Order fetched",extra=extra_(order_id=order_id))
             return order
         except Exception:
             logger.exception(
                 "Failed to fetch order",
-                extra=extra_(operation="svc_get_order", status="failure", order_id=order_id),
+                extra=extra_(order_id=order_id),
             )
             raise
 
@@ -52,18 +45,11 @@ class OrderService(BaseOrderService):
         self._validate_non_empty(normalized_order_id, "order_id")
         try:
             self.order_repo.update_status(normalized_order_id, OrderStatus.CANCELLED.value)
-            logger.info(
-                "Order cancelled",
-                extra=extra_(
-                    operation="svc_cancel_order",
-                    status="success",
-                    order_id=order_id,
-                ),
-            )
+            logger.info("Order cancelled", extra=extra_(order_id=order_id))
         except Exception:
             logger.exception(
                 "Failed to cancel order",
-                extra=extra_(operation="svc_cancel_order", status="failure", order_id=order_id),
+                extra=extra_(order_id=order_id),
             )
             raise
 
@@ -77,15 +63,11 @@ class OrderService(BaseOrderService):
             )
             logger.info(
                 "Order marked refunded",
-                extra=extra_(
-                    operation="svc_mark_refunded",
-                    status="success",
-                    order_id=order_id,
-                ),
+                extra=extra_(order_id=order_id),
             )
         except Exception:
             logger.exception(
                 "Failed to mark order refunded",
-                extra=extra_(operation="svc_mark_refunded", status="failure", order_id=order_id),
+                extra=extra_(order_id=order_id),
             )
             raise

@@ -43,8 +43,6 @@ async def init_postgres() -> None:
     logger.info(
         "PostgreSQL engine initialized",
         extra=extra_(
-            operation="init_postgres",
-            status="success",
             host=envs.PG_DB_HOST,
             port=envs.PG_DB_PORT,
             db=envs.PG_DB_NAME,
@@ -56,30 +54,18 @@ async def init_postgres() -> None:
 
 async def get_pgdb() -> AsyncGenerator[AsyncSession | Any, Any]:
     async with AsyncSessionLocal() as session:
-        logger.debug(
-            "PostgreSQL session acquired",
-            extra=extra_(operation="get_pgdb", status="start"),
-        )
+        logger.debug("PostgreSQL session acquired")
         
         try:
             yield session
         
         finally:
-            logger.debug(
-                "PostgreSQL session released",
-                extra=extra_(operation="get_pgdb", status="success"),
-            )
+            logger.debug("PostgreSQL session released")
 
 
 async def close_postgres() -> None:
     try:
         await engine.dispose()
-        logger.info(
-            "PostgreSQL engine disposed",
-            extra=extra_(operation="close_postgres", status="success"),
-        )
+        logger.info("PostgreSQL engine disposed")
     except Exception:
-        logger.exception(
-            "Failed to dispose PostgreSQL engine",
-            extra=extra_(operation="close_postgres", status="failure"),
-        )
+        logger.exception("Failed to dispose PostgreSQL engine")

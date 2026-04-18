@@ -67,8 +67,6 @@ async def reasoning_node(state: TicketAgentState) -> TicketAgentState:
     logger.debug(
         "LLM reasoning completed",
         extra=extra_(
-            operation="agent_reasoning",
-            status="success",
             run_id=state.get("run_id"),
             ticket_id=state.get("ticket", {}).get("ticket_id"),
             tool_calls_planned=len(response.tool_calls or []),
@@ -107,8 +105,6 @@ async def reasoning_node(state: TicketAgentState) -> TicketAgentState:
         logger.exception(
             "Failed to write reasoning step audit",
             extra=extra_(
-                operation="audit_reasoning",
-                status="failure",
                 run_id=state.get("run_id"),
                 ticket_id=state.get("ticket", {}).get("ticket_id"),
             ),
@@ -142,8 +138,6 @@ async def tool_node(state: TicketAgentState) -> TicketAgentState:
         logger.debug(
             "Tool call requested",
             extra=extra_(
-                operation="tool_call",
-                status="start",
                 run_id=state.get("run_id"),
                 ticket_id=state.get("ticket", {}).get("ticket_id"),
                 tool_name=name,
@@ -177,8 +171,6 @@ async def tool_node(state: TicketAgentState) -> TicketAgentState:
                 logger.warning(
                     "Tool call attempt failed",
                     extra=extra_(
-                        operation="tool_call",
-                        status="retrying" if attempt < envs.AGENT_MAX_RETRIES else "failure",
                         run_id=state.get("run_id"),
                         ticket_id=state.get("ticket", {}).get("ticket_id"),
                         tool_name=name,
@@ -217,8 +209,6 @@ async def tool_node(state: TicketAgentState) -> TicketAgentState:
                 logger.exception(
                     "Failed to write tool execution audit",
                     extra=extra_(
-                        operation="audit_tool",
-                        status="failure",
                         run_id=state.get("run_id"),
                         ticket_id=state.get("ticket", {}).get("ticket_id"),
                         tool_name=name,
@@ -228,8 +218,6 @@ async def tool_node(state: TicketAgentState) -> TicketAgentState:
         logger.info(
             "Tool call completed",
             extra=extra_(
-                operation="tool_call",
-                status="success" if status == "success" else "failure",
                 run_id=state.get("run_id"),
                 ticket_id=state.get("ticket", {}).get("ticket_id"),
                 tool_name=name,

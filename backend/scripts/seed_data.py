@@ -18,7 +18,7 @@ SessionLocal = sessionmaker(bind=engine)
 
 
 def load_json(path):
-    with open(path, "r") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -151,6 +151,7 @@ def seed_tickets(session, tickets_data):
             source=t["source"],
             priority="high" if t["tier"] == 3 else "medium",
             created_at=parse_datetime(t["created_at"]),
+            expected_action=t["expected_action"]
         )
         session.add(ticket)
 

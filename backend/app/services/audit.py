@@ -24,20 +24,12 @@ class AuditService(BaseService):
             timeline = self.agent_run_repo.get_audit_timeline(normalized_ticket_id)
             logger.debug(
                 "Audit timeline fetched",
-                extra=extra_(
-                    operation="svc_audit_timeline",
-                    status="success" if timeline else "skipped",
-                    ticket_id=normalized_ticket_id,
-                ),
+                extra=extra_(ticket_id=normalized_ticket_id),
             )
             return timeline
         except Exception:
             logger.exception(
                 "Failed to fetch audit timeline",
-                extra=extra_(
-                    operation="svc_audit_timeline",
-                    status="failure",
-                    ticket_id=normalized_ticket_id,
-                ),
+                extra=extra_(ticket_id=normalized_ticket_id),
             )
             raise

@@ -43,11 +43,7 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
     ):
         logger.warning(
             "Dashboard login failed",
-            extra=extra_(
-                operation="auth_login",
-                status="failure",
-                username=credentials.username,
-            ),
+            extra=extra_(username=credentials.username),
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -63,7 +59,7 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
     except Exception:
         logger.exception(
             "Failed to sign JWT",
-            extra=extra_(operation="auth_login", status="failure", username=credentials.username),
+            extra=extra_(username=credentials.username),
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -73,8 +69,6 @@ async def login(credentials: HTTPBasicCredentials = Depends(security)):
     logger.info(
         "Dashboard login successful",
         extra=extra_(
-            operation="auth_login",
-            status="success",
             username=credentials.username,
             expires_in=int(envs.APP_JWT_EXP_TIME),
         ),

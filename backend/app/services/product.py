@@ -27,20 +27,12 @@ class ProductService(BaseService):
             product = self.product_repo.get_by_external_id(normalized_product_id)
             logger.debug(
                 "Product fetched",
-                extra=extra_(
-                    operation="svc_get_product",
-                    status="success" if product else "skipped",
-                    product_id=normalized_product_id,
-                ),
+                extra=extra_(product_id=normalized_product_id),
             )
             return product
         except Exception:
             logger.exception(
                 "Failed to fetch product",
-                extra=extra_(
-                    operation="svc_get_product",
-                    status="failure",
-                    product_id=normalized_product_id,
-                ),
+                extra=extra_(product_id=normalized_product_id),
             )
             raise

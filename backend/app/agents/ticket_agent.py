@@ -30,8 +30,6 @@ async def init_ticket_resolver_agent():
         logger.info(
             "Initializing Redis checkpointer for LangGraph",
             extra=extra_(
-                operation="agent_graph_init",
-                status="start",
                 history_ttl=envs.HISTORY_TTL,
                 refresh_on_read=envs.HISTORY_TTL_REFRESH_ON_READ,
             ),
@@ -39,10 +37,7 @@ async def init_ticket_resolver_agent():
         checkpointer = AsyncRedisSaver(redis_client=get_redis(), ttl=ttl_config)
         await checkpointer.asetup()
     except Exception:
-        logger.exception(
-            "Failed to initialize LangGraph Redis checkpointer",
-            extra=extra_(operation="agent_graph_init", status="failure"),
-        )
+        logger.exception("Failed to initialize LangGraph Redis checkpointer")
         raise
 
     workflow = StateGraph(TicketAgentState)
@@ -61,20 +56,11 @@ async def init_ticket_resolver_agent():
     workflow.add_edge("tools", "reasoning")
     try:
         graph = workflow.compile(checkpointer=checkpointer)
-        logger.info(
-            "Agent graph compiled",
-            extra=extra_(operation="agent_graph_init", status="success"),
-        )
+        logger.info("Agent graph compiled")
         if envs.AGENT_DRAW_GRAPH:
             graph.get_graph().draw_mermaid_png(output_file_path="ticket_resolver.png")
-            logger.debug(
-                "Agent graph diagram written",
-                extra=extra_(operation="agent_graph_init", status="success", artifact="ticket_resolver.png"),
-            )
+            logger.debug("Agent graph diagram written")
         return graph
     except Exception:
-        logger.exception(
-            "Failed to compile agent graph",
-            extra=extra_(operation="agent_graph_init", status="failure"),
-        )
+        logger.exception("Failed to compile agent graph")
         raise

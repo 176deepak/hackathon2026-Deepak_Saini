@@ -29,10 +29,7 @@ logger = AppLoggerAdapter(
 async def _run_sync_with_pg(op: Callable[[Session], dict[str, Any]]) -> dict[str, Any]:
     async for async_session in get_pgdb():
         return await async_session.run_sync(op)
-    logger.error(
-        "Unable to acquire database session",
-        extra=extra_(operation="handler_db", status="failure"),
-    )
+    logger.error("Unable to acquire database session")
     return {"status": "error", "message": "Unable to acquire database session"}
 
 
@@ -93,10 +90,7 @@ async def handle_get_customer(
     customer_id: str | None, email: str | None
 ) -> dict[str, Any]:
     if not (customer_id or email):
-        logger.warning(
-            "Missing customer_id/email for customer lookup",
-            extra=extra_(operation="handle_get_customer", status="failure"),
-        )
+        logger.warning("Missing customer_id/email for customer lookup")
         return {
             "status": "error",
             "message": "Either customer_id or email is required",
@@ -130,8 +124,6 @@ async def handle_get_customer(
         logger.debug(
             "Customer lookup completed",
             extra=extra_(
-                operation="handle_get_customer",
-                status="success",
                 customer_id=customer_id,
                 email=email,
                 result_status=result.get("status"),
@@ -141,12 +133,7 @@ async def handle_get_customer(
     except Exception:
         logger.exception(
             "Customer lookup failed",
-            extra=extra_(
-                operation="handle_get_customer",
-                status="failure",
-                customer_id=customer_id,
-                email=email,
-            ),
+            extra=extra_(customer_id=customer_id, email=email),
         )
         raise
 
@@ -175,8 +162,6 @@ async def handle_get_product(product_id: str) -> dict[str, Any]:
         logger.debug(
             "Product lookup completed",
             extra=extra_(
-                operation="handle_get_product",
-                status="success",
                 product_id=product_id,
                 result_status=result.get("status"),
             ),
@@ -185,7 +170,7 @@ async def handle_get_product(product_id: str) -> dict[str, Any]:
     except Exception:
         logger.exception(
             "Product lookup failed",
-            extra=extra_(operation="handle_get_product", status="failure", product_id=product_id),
+            extra=extra_(product_id=product_id),
         )
         raise
 
@@ -215,18 +200,13 @@ async def handle_get_order(order_id: str) -> dict[str, Any]:
         result = await _run_sync_with_pg(_op)
         logger.debug(
             "Order lookup completed",
-            extra=extra_(
-                operation="handle_get_order",
-                status="success",
-                order_id=order_id,
-                result_status=result.get("status"),
-            ),
+            extra=extra_(order_id=order_id, result_status=result.get("status")),
         )
         return result
     except Exception:
         logger.exception(
             "Order lookup failed",
-            extra=extra_(operation="handle_get_order", status="failure", order_id=order_id),
+            extra=extra_(order_id=order_id),
         )
         raise
 
@@ -241,22 +221,13 @@ async def handle_check_refund_eligibility(order_id: str) -> dict[str, Any]:
         result = await _run_sync_with_pg(_op)
         logger.info(
             "Refund eligibility evaluated",
-            extra=extra_(
-                operation="handle_check_refund_eligibility",
-                status="success",
-                order_id=order_id,
-                eligible=result.get("eligible"),
-            ),
+            extra=extra_(order_id=order_id, eligible=result.get("eligible")),
         )
         return result
     except Exception:
         logger.exception(
             "Refund eligibility evaluation failed",
-            extra=extra_(
-                operation="handle_check_refund_eligibility",
-                status="failure",
-                order_id=order_id,
-            ),
+            extra=extra_(order_id=order_id),
         )
         raise
 
@@ -265,12 +236,7 @@ async def handle_issue_refund(order_id: str, amount: float) -> dict[str, Any]:
     if amount <= 0:
         logger.warning(
             "Invalid refund amount",
-            extra=extra_(
-                operation="handle_issue_refund",
-                status="failure",
-                order_id=order_id,
-                amount=amount,
-            ),
+            extra=extra_(order_id=order_id, amount=amount),
         )
         return {
             "status": "failed",
@@ -316,8 +282,6 @@ async def handle_issue_refund(order_id: str, amount: float) -> dict[str, Any]:
         logger.info(
             "Refund attempt completed",
             extra=extra_(
-                operation="handle_issue_refund",
-                status="success" if result.get("status") == "success" else "failure",
                 order_id=order_id,
                 amount=amount,
                 result_status=result.get("status"),
@@ -327,12 +291,7 @@ async def handle_issue_refund(order_id: str, amount: float) -> dict[str, Any]:
     except Exception:
         logger.exception(
             "Refund attempt failed",
-            extra=extra_(
-                operation="handle_issue_refund",
-                status="failure",
-                order_id=order_id,
-                amount=amount,
-            ),
+            extra=extra_(order_id=order_id, amount=amount),
         )
         raise
 
@@ -341,11 +300,7 @@ async def handle_send_reply(ticket_id: str, message: str) -> dict[str, Any]:
     if not message or not message.strip():
         logger.warning(
             "Empty reply message rejected",
-            extra=extra_(
-                operation="handle_send_reply",
-                status="failure",
-                ticket_id=ticket_id,
-            ),
+            extra=extra_(ticket_id=ticket_id),
         )
         return {"status": "failed", "message": "Message cannot be empty"}
 
@@ -364,19 +319,11 @@ async def handle_send_reply(ticket_id: str, message: str) -> dict[str, Any]:
         result = await _run_sync_with_pg(_op)
         logger.info(
             "Reply send attempt completed",
-            extra=extra_(
-                operation="handle_send_reply",
-                status="success" if result.get("status") == "sent" else "failure",
-                ticket_id=ticket_id,
-                result_status=result.get("status"),
-            ),
+            extra=extra_(ticket_id=ticket_id, result_status=result.get("status")),
         )
         return result
     except Exception:
-        logger.exception(
-            "Reply send attempt failed",
-            extra=extra_(operation="handle_send_reply", status="failure", ticket_id=ticket_id),
-        )
+        logger.exception("Reply send attempt failed", extra=extra_(ticket_id=ticket_id))
         raise
 
 
@@ -417,8 +364,6 @@ async def handle_escalate(
         logger.warning(
             "Escalation completed",
             extra=extra_(
-                operation="handle_escalate",
-                status="success" if result.get("status") == "escalated" else "failure",
                 ticket_id=ticket_id,
                 priority=priority,
                 run_id=run_id,
@@ -429,12 +374,6 @@ async def handle_escalate(
     except Exception:
         logger.exception(
             "Escalation failed",
-            extra=extra_(
-                operation="handle_escalate",
-                status="failure",
-                ticket_id=ticket_id,
-                priority=priority,
-                run_id=run_id,
-            ),
+            extra=extra_(ticket_id=ticket_id, priority=priority, run_id=run_id),
         )
         raise

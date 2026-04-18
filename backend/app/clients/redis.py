@@ -25,8 +25,6 @@ async def init_redis():
         logger.info(
             "Redis initialized",
             extra=extra_(
-                operation="init_redis",
-                status="success",
                 redis_db=envs.REDIS_DB,
                 redis_host=envs.REDIS_HOST,
                 redis_port=envs.REDIS_PORT,
@@ -36,8 +34,6 @@ async def init_redis():
         logger.exception(
             "Redis initialization failed",
             extra=extra_(
-                operation="init_redis",
-                status="failure",
                 redis_db=envs.REDIS_DB,
                 redis_host=envs.REDIS_HOST,
                 redis_port=envs.REDIS_PORT,
@@ -49,16 +45,10 @@ async def init_redis():
 def get_redis() -> Redis:
     
     if _redis is None:
-        logger.error(
-            "Redis client not initialized",
-            extra=extra_(operation="get_redis", status="failure"),
-        )
+        logger.error("Redis client not initialized")
         raise RuntimeError("Redis client not initialized")
 
-    logger.debug(
-        "Redis client returned",
-        extra=extra_(operation="get_redis", status="success"),
-    )
+    logger.debug("Redis client returned")
     return _redis
 
 
@@ -69,14 +59,8 @@ async def close_redis():
 
     try:
         await _redis.close()
-        logger.info(
-            "Redis connection closed",
-            extra=extra_(operation="close_redis", status="success"),
-        )
+        logger.info("Redis connection closed")
     except Exception:
-        logger.exception(
-            "Failed to close Redis connection",
-            extra=extra_(operation="close_redis", status="failure"),
-        )
+        logger.exception("Failed to close Redis connection")
     finally:
         _redis = None

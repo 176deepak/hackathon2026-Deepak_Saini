@@ -21,16 +21,10 @@ class DashboardService(BaseDashboardService):
     def get_metrics(self) -> DashboardMetrics:
         try:
             metrics = self.dashboard_repo.get_metrics()
-            logger.debug(
-                "Dashboard metrics returned",
-                extra=extra_(operation="svc_dashboard_metrics", status="success"),
-            )
+            logger.debug("Dashboard metrics returned")
             return metrics
         except Exception:
-            logger.exception(
-                "Failed to get dashboard metrics",
-                extra=extra_(operation="svc_dashboard_metrics", status="failure"),
-            )
+            logger.exception("Failed to get dashboard metrics")
             raise
 
     def get_recent_activity(self, limit: int = 10) -> list[dict]:
@@ -38,21 +32,9 @@ class DashboardService(BaseDashboardService):
             rows = self.dashboard_repo.get_recent_activity(limit=limit)
             logger.debug(
                 "Dashboard recent activity returned",
-                extra=extra_(
-                    operation="svc_dashboard_recent_activity",
-                    status="success",
-                    limit=limit,
-                    count=len(rows),
-                ),
+                extra=extra_(limit=limit, count=len(rows)),
             )
             return rows
         except Exception:
-            logger.exception(
-                "Failed to get recent activity",
-                extra=extra_(
-                    operation="svc_dashboard_recent_activity",
-                    status="failure",
-                    limit=limit,
-                ),
-            )
+            logger.exception("Failed to get recent activity")
             raise

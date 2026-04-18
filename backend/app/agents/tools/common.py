@@ -38,25 +38,14 @@ async def search_knowledge_base(query: str, config: RunnableConfig) -> dict:
     try:
         logger.debug(
             "Searching knowledge base",
-            extra=extra_(
-                operation="search_knowledge_base",
-                status="start",
-                query_preview=(query or "")[:120],
-            ),
+            extra=extra_(query_preview=(query or "")[:120]),
         )
         knowledge = await kb_service.query_index(query=query, rerank=False)
-        logger.info(
-            "Knowledge base search completed",
-            extra=extra_(operation="search_knowledge_base", status="success"),
-        )
+        logger.info("Knowledge base search completed")
         return knowledge
     except Exception as e:
         logger.exception(
             "Knowledge base search failed",
-            extra=extra_(
-                operation="search_knowledge_base",
-                status="failure",
-                error_type=type(e).__name__,
-            ),
+            extra=extra_(error_type=type(e).__name__),
         )
         raise

@@ -68,7 +68,8 @@ class AgentRunRepo(BaseAgentRunRepo):
             run = self.db.scalar(select(AgentRun).where(AgentRun.id == UUID(run_id)))
             if run is None:
                 logger.warning(
-                    "Run not found for completion", extra=extra_(run_id=run_id)
+                    "Run not found for completion", 
+                    extra=extra_(run_id=run_id)
                 )
                 return
 
@@ -95,7 +96,8 @@ class AgentRunRepo(BaseAgentRunRepo):
             )
         except Exception:
             logger.exception(
-                "Failed to complete agent run", extra=extra_(run_id=run_id)
+                "Failed to complete agent run", 
+                extra=extra_(run_id=run_id)
             )
             self.db.rollback()
             raise
@@ -115,7 +117,8 @@ class AgentRunRepo(BaseAgentRunRepo):
             logger.warning("Agent run failed", extra=extra_(run_id=run_id))
         except Exception:
             logger.exception(
-                "Failed to mark agent run failed", extra=extra_(run_id=run_id),
+                "Failed to mark agent run failed", 
+                extra=extra_(run_id=run_id),
             )
             self.db.rollback()
             raise

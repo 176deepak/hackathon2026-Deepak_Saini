@@ -63,25 +63,12 @@ def sign_jwt(user_id: str, **kwargs) -> dict[str, str]:
 
     try:
         token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-        logger.debug(
-            "JWT signed",
-            extra=extra_(
-                operation="sign_jwt",
-                status="success",
-                sub=user_id,
-                exp=payload.get("exp"),
-            ),
-        )
+        logger.debug("JWT signed", extra=extra_(sub=user_id, exp=payload.get("exp")))
         return {"access_token": token}
     except Exception as e:
         logger.exception(
             "JWT signing failed",
-            extra=extra_(
-                operation="sign_jwt",
-                status="failure",
-                sub=user_id,
-                error_type=type(e).__name__,
-            ),
+            extra=extra_(sub=user_id, error_type=type(e).__name__),
         )
         raise
 
@@ -91,39 +78,22 @@ def decode_jwt(token: str) -> dict:
     try:
         decoded_token = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         if decoded_token.get("exp", 0) < time.time():
-            logger.warning(
-                "JWT expired",
-                extra=extra_(operation="decode_jwt", status="failure", reason="expired"),
-            )
+            logger.warning("JWT expired")
             return None
         return decoded_token
     except jwt.ExpiredSignatureError:
-        logger.warning(
-            "JWT expired (signature)",
-            extra=extra_(
-                operation="decode_jwt", status="failure", reason="expired_signature"
-            ),
-        )
+        logger.warning("JWT expired (signature)")
         return None
     except jwt.InvalidTokenError as e:
         logger.warning(
             "JWT invalid",
-            extra=extra_(
-                operation="decode_jwt",
-                status="failure",
-                reason="invalid_token",
-                error_type=type(e).__name__,
-            ),
+            extra=extra_(reason="invalid_token", error_type=type(e).__name__),
         )
         return None
     except Exception as e:
         logger.exception(
             "JWT decode failed",
-            extra=extra_(
-                operation="decode_jwt",
-                status="failure",
-                error_type=type(e).__name__,
-            ),
+            extra=extra_(error_type=type(e).__name__),
         )
         return None
 

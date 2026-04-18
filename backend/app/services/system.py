@@ -28,16 +28,10 @@ class SystemService(BaseService):
                 "version": envs.APP_VERSION,
                 "timestamp": datetime.now(timezone.utc),
             }
-            logger.debug(
-                "Health check succeeded",
-                extra=extra_(operation="svc_health", status="success"),
-            )
+            logger.debug("Health check succeeded")
             return payload
         except Exception:
-            logger.exception(
-                "Health check failed",
-                extra=extra_(operation="svc_health", status="failure"),
-            )
+            logger.exception("Health check failed")
             return {
                 "status": "degraded",
                 "database": "down",
@@ -46,5 +40,5 @@ class SystemService(BaseService):
             }
 
     def ping(self) -> dict:
-        logger.debug("Ping", extra=extra_(operation="svc_ping", status="success"))
+        logger.debug("Ping")
         return {"message": "pong"}

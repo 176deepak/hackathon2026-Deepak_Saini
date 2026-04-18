@@ -26,20 +26,10 @@ class TicketService(BaseTicketService):
         self._validate_non_empty(normalized_ticket_id, "ticket_id")
         try:
             ticket = self.ticket_repo.get_by_id(normalized_ticket_id)
-            logger.debug(
-                "Ticket fetched",
-                extra=extra_(
-                    operation="svc_get_ticket",
-                    status="success" if ticket else "skipped",
-                    ticket_id=ticket_id,
-                ),
-            )
+            logger.debug("Ticket fetched",extra=extra_(ticket_id=ticket_id))
             return ticket
         except Exception:
-            logger.exception(
-                "Failed to fetch ticket",
-                extra=extra_(operation="svc_get_ticket", status="failure", ticket_id=ticket_id),
-            )
+            logger.exception("Failed to fetch ticket",extra=extra_(ticket_id=ticket_id))
             raise
 
     def get_ticket_by_reference(self, ticket_ref: str) -> Optional[TicketOut]:
@@ -49,21 +39,13 @@ class TicketService(BaseTicketService):
             ticket = self.ticket_repo.get_by_reference(normalized_ticket_ref)
             logger.debug(
                 "Ticket fetched by reference",
-                extra=extra_(
-                    operation="svc_get_ticket_ref",
-                    status="success" if ticket else "skipped",
-                    ticket_ref=ticket_ref,
-                ),
+                extra=extra_(ticket_ref=ticket_ref),
             )
             return ticket
         except Exception:
             logger.exception(
                 "Failed to fetch ticket by reference",
-                extra=extra_(
-                    operation="svc_get_ticket_ref",
-                    status="failure",
-                    ticket_ref=ticket_ref,
-                ),
+                extra=extra_(ticket_ref=ticket_ref),
             )
             raise
 
@@ -83,26 +65,13 @@ class TicketService(BaseTicketService):
             total = self.ticket_repo.count_tickets(status=status)
             logger.debug(
                 "Tickets listed",
-                extra=extra_(
-                    operation="svc_list_tickets",
-                    status="success",
-                    status_filter=status,
-                    page=page,
-                    limit=limit,
-                    total=total,
-                ),
+                extra=extra_(status_filter=status, page=page, limit=limit, total=total),
             )
             return items, total
         except Exception:
             logger.exception(
                 "Failed to list tickets",
-                extra=extra_(
-                    operation="svc_list_tickets",
-                    status="failure",
-                    status_filter=status,
-                    page=page,
-                    limit=limit,
-                ),
+                extra=extra_(status_filter=status,page=page,limit=limit),
             )
             raise
 
@@ -118,12 +87,7 @@ class TicketService(BaseTicketService):
         if ticket is None:
             logger.warning(
                 "Ticket not found for status update",
-                extra=extra_(
-                    operation="svc_update_ticket_status",
-                    status="skipped",
-                    ticket_ref=ticket_ref,
-                    new_status=status,
-                ),
+                extra=extra_(ticket_ref=ticket_ref, new_status=status),
             )
             return None
 
@@ -131,23 +95,13 @@ class TicketService(BaseTicketService):
             self.ticket_repo.update_status(ticket.id, status)
             logger.info(
                 "Ticket status updated",
-                extra=extra_(
-                    operation="svc_update_ticket_status",
-                    status="success",
-                    ticket_ref=ticket_ref,
-                    new_status=status,
-                ),
+                extra=extra_(ticket_ref=ticket_ref, new_status=status),
             )
             return self.get_ticket_by_reference(ticket.id)
         except Exception:
             logger.exception(
                 "Failed to update ticket status",
-                extra=extra_(
-                    operation="svc_update_ticket_status",
-                    status="failure",
-                    ticket_ref=ticket_ref,
-                    new_status=status,
-                ),
+                extra=extra_(ticket_ref=ticket_ref, new_status=status),
             )
             raise
 
