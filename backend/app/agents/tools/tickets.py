@@ -1,5 +1,14 @@
-from langchain_core.tools import tool
+from typing import Any
+
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
+
+from app.agents.handlers.tools import (
+    handle_check_refund_eligibility,
+    handle_escalate,
+    handle_issue_refund,
+    handle_send_reply,
+)
 
 
 @tool("check_refund_eligibility", parse_docstring=True)
@@ -20,7 +29,8 @@ async def check_refund_eligibility(order_id: str, config: RunnableConfig) -> dic
                 "reason": "Within return window"
             }
     """
-    pass
+    _ = config
+    return await handle_check_refund_eligibility(order_id=order_id)
 
 
 @tool("issue_refund", parse_docstring=True)
@@ -41,7 +51,8 @@ async def issue_refund(order_id: str, amount: float, config: RunnableConfig) -> 
                 "message": "Refund processed successfully"
             }
     """
-    pass
+    _ = config
+    return await handle_issue_refund(order_id=order_id, amount=amount)
 
 
 @tool("send_reply", parse_docstring=True)
@@ -59,7 +70,25 @@ async def send_reply(ticket_id: str, message: str, config: RunnableConfig) -> di
                 "status": "sent"
             }
     """
-    pass
+    _ = config
+    return await handle_send_reply(ticket_id=ticket_id, message=message)
+
+
+def _extract_run_id(config: RunnableConfig) -> str | None:
+    cfg = config if isinstance(config, dict) else {}
+
+    # LangChain usually stores custom values in configurable
+    configurable: Any = cfg.get("configurable", {})
+    if isinstance(configurable, dict):
+        run_id = configurable.get("run_id")
+        if run_id:
+            return str(run_id)
+
+    run_id = cfg.get("run_id")
+    if run_id:
+        return str(run_id)
+
+    return None
 
 
 @tool("escalate", parse_docstring=True)
@@ -67,7 +96,7 @@ async def escalate(
     ticket_id: str,
     summary: str,
     priority: str,
-    config: RunnableConfig
+    config: RunnableConfig,
 ) -> dict:
     """Escalate the ticket to a human support agent.
 
@@ -87,4 +116,10 @@ async def escalate(
                 "assigned_to": "human_agent"
             }
     """
-    pass
+    run_id = _extract_run_id(config)
+    return await handle_escalate(
+        ticket_id=ticket_id,
+        summary=summary,
+        priority=priority,
+        run_id=run_id,
+    )

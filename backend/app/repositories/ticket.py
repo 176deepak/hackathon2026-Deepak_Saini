@@ -2,11 +2,11 @@ from typing import Optional
 from uuid import UUID
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.enums import TicketStatus
-from app.models.models import Ticket, Escalation, Refund
+from app.models.models import Ticket, Escalation, Refund, TicketMessage
 from app.repositories.base import BaseTicketRepo, BaseEscalationRepo, BaseRefundRepo
 from app.schemas.repo import TicketOut
 
@@ -37,11 +37,44 @@ class TicketRepo(BaseTicketRepo):
             return None
         return _to_ticket_out(ticket)
 
+    def get_by_external_id(self, external_ticket_id: str) -> Optional[TicketOut]:
+        ticket = self.db.scalar(
+            select(Ticket).where(Ticket.external_ticket_id == external_ticket_id)
+        )
+        if ticket is None:
+            return None
+        return _to_ticket_out(ticket)
+
+    def get_by_reference(self, ticket_ref: str) -> Optional[TicketOut]:
+        ticket_by_id = self.get_by_id(ticket_ref)
+        if ticket_by_id is not None:
+            return ticket_by_id
+        return self.get_by_external_id(ticket_ref.strip())
+
     def get_all_pending(self) -> list[TicketOut]:
         tickets = self.db.scalars(
             select(Ticket).where(Ticket.status == TicketStatus.PENDING)
         ).all()
         return [_to_ticket_out(ticket) for ticket in tickets]
+
+    def list_tickets(
+        self,
+        status: str | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> list[TicketOut]:
+        stmt = select(Ticket).order_by(Ticket.created_at.desc())
+        if status:
+            stmt = stmt.where(Ticket.status == TicketStatus(status))
+
+        tickets = self.db.scalars(stmt.offset(offset).limit(limit)).all()
+        return [_to_ticket_out(ticket) for ticket in tickets]
+
+    def count_tickets(self, status: str | None = None) -> int:
+        stmt = select(func.count()).select_from(Ticket)
+        if status:
+            stmt = stmt.where(Ticket.status == TicketStatus(status))
+        return self.db.scalar(stmt) or 0
 
     def update_status(self, ticket_id: str, status: str) -> None:
         try:
@@ -56,6 +89,33 @@ class TicketRepo(BaseTicketRepo):
         ticket.status = TicketStatus(status)
         self.db.add(ticket)
         self.db.commit()
+
+    def create_message(
+        self,
+        ticket_ref: str,
+        sender_type: str,
+        message: str,
+    ) -> bool:
+        ticket = self.db.scalar(
+            select(Ticket).where(Ticket.external_ticket_id == ticket_ref.strip())
+        )
+        if ticket is None:
+            try:
+                ticket_uuid = UUID(ticket_ref)
+            except ValueError:
+                return False
+            ticket = self.db.scalar(select(Ticket).where(Ticket.id == ticket_uuid))
+            if ticket is None:
+                return False
+
+        ticket_message = TicketMessage(
+            ticket_id=ticket.id,
+            sender_type=sender_type,
+            message=message,
+        )
+        self.db.add(ticket_message)
+        self.db.commit()
+        return True
 
 
 class EscalationRepo(BaseEscalationRepo):

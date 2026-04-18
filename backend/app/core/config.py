@@ -35,7 +35,15 @@ class ENV(BaseSettings):
     PG_DEFAULT_MAX_LIMIT: int = Field(..., alias="PG_DEFAULT_MAX_LIMIT")
     
     GOOGLE_API_KEY: str = Field(..., alias="GOOGLE_API_KEY")
-    OPENAI_API_KEY: str = Field(..., alias="OPENAI_API_KEY")
+
+    WHICH_KNOWLEDGE_BASE: str = Field(..., alias="WHICH_KNOWLEDGE_BASE")
+    VECTOR_DB_NAME: str = Field(..., alias="VECTOR_DB_NAME")
+    CHUNK_SIZE: str = Field(..., alias="CHUNK_SIZE")
+    CHUNK_OVERLAP: str = Field(..., alias="CHUNK_OVERLAP")
+    KNOWLEDGE_BASE_GDRIVE_FILE_ID:str=Field(..., alias="KNOWLEDGE_BASE_GDRIVE_FILE_ID")
+    EMBEDDING_MODEL: str = Field(..., alias="EMBEDDING_MODEL")
+    NO_TOP_K_CHUNKS: int = Field(..., alias="NO_TOP_K_CHUNKS")
+    NO_TOP_N_CHUNKS: int = Field(..., alias="NO_TOP_N_CHUNKS")
 
     @computed_field
     @property

@@ -35,3 +35,17 @@ class DashboardRepo(BaseDashboardRepo):
             escalated=escalated,
             failed=failed,
         )
+
+    def get_recent_activity(self, limit: int = 10) -> list[dict]:
+        tickets = self.db.scalars(
+            select(Ticket).order_by(Ticket.updated_at.desc()).limit(limit)
+        ).all()
+        return [
+            {
+                "ticket_id": ticket.external_ticket_id,
+                "status": ticket.status.value if ticket.status else "",
+                "subject": ticket.subject,
+                "updated_at": ticket.updated_at,
+            }
+            for ticket in tickets
+        ]

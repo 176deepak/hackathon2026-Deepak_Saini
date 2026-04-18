@@ -1,12 +1,14 @@
-from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
+
+from app.agents.handlers.tools import handle_get_customer
 
 
 @tool("get_customer", parse_docstring=True)
 async def get_customer(
     customer_id: str | None,
     email: str | None,
-    config: RunnableConfig
+    config: RunnableConfig,
 ) -> dict:
     """Fetch customer details using either customer ID or email.
 
@@ -27,4 +29,5 @@ async def get_customer(
                 "risk_flag": false
             }
     """
-    pass
+    _ = config
+    return await handle_get_customer(customer_id=customer_id, email=email)

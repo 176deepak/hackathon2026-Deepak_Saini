@@ -27,6 +27,48 @@ class BaseService(ABC):
     @staticmethod
     def _safe_str(value: str | None) -> str:
         return value.strip() if isinstance(value, str) else ""
+
+
+class BaseChunkCreationService(ABC):
+    def __init__(self):
+        super().__init__()
+
+    @abstractmethod
+    def _load_kb_file(self, filepath:str):
+        """Load knowledge base file
+
+        Args:
+            filepath: Knowledge base filepath
+
+        Returns:
+            Document: Langchain Document object
+        """
+        pass
+
+    @abstractmethod
+    def create_chunks(self, filepath: str, chunk_size: int, overlapping: int) -> list:
+        """Create chunks from knowledge base files
+
+        Args:
+            filepath: Knowledge base filepath
+
+        Returns:
+            list: List of chunks
+        """    
+        pass
+
+
+class BaseVectorIndexService(ABC):
+    def __init__(self):
+        super().__init__()
+
+    @abstractmethod
+    async def update_index(self, chunks):
+        pass
+
+    @abstractmethod
+    async def query_index(self, chunks, rerank):
+        pass
     
     
 class BaseCustomerService(BaseService):

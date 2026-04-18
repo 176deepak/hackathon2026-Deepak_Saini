@@ -1,5 +1,7 @@
-from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import tool
+
+from app.agents.handlers.tools import handle_get_order, handle_get_product
 
 
 @tool("get_product", parse_docstring=True)
@@ -20,7 +22,8 @@ async def get_product(product_id: str, config: RunnableConfig) -> dict:
                 "returnable": true
             }
     """
-    pass
+    _ = config
+    return await handle_get_product(product_id=product_id)
 
 
 @tool("get_order", parse_docstring=True)
@@ -42,4 +45,5 @@ async def get_order(order_id: str, config: RunnableConfig) -> dict:
                 "refund_status": null
             }
     """
-    pass
+    _ = config
+    return await handle_get_order(order_id=order_id)

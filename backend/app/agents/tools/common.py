@@ -1,6 +1,9 @@
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 
+from app.core.config import envs
+from app.services import KnowledgeBaseService
+
 
 @tool("search_knowledge_base", parse_docstring=True)
 async def search_knowledge_base(query: str, config: RunnableConfig) -> dict:
@@ -20,4 +23,10 @@ async def search_knowledge_base(query: str, config: RunnableConfig) -> dict:
                 "source": "return_policy_v2"
             }
     """
-    pass
+    kb_service = KnowledgeBaseService(which=envs.WHICH_KNOWLEDGE_BASE)
+    try:
+        knowledge = await kb_service.query_index(query=query, rerank=False)
+        
+        return knowledge
+    except Exception as e:
+        raise

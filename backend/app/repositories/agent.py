@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.enums import AgentRunStatus, ToolExecutionStatus
-from app.models.models import AgentRun, AgentStep, ToolExecution
+from app.models.models import AgentRun, AgentStep, Ticket, ToolExecution
 from app.repositories.base import (
     BaseAgentRunRepo, BaseAgentStepRepo, BaseToolExecutionRepo,
 )
@@ -72,6 +72,74 @@ class AgentRunRepo(BaseAgentRunRepo):
         run.ended_at = datetime.utcnow()
         self.db.add(run)
         self.db.commit()
+
+    def get_audit_timeline(self, ticket_ref: str) -> dict | None:
+        ticket = self.db.scalar(
+            select(Ticket).where(Ticket.external_ticket_id == ticket_ref.strip())
+        )
+        if ticket is None:
+            try:
+                ticket_uuid = UUID(ticket_ref)
+            except ValueError:
+                return None
+            ticket = self.db.scalar(select(Ticket).where(Ticket.id == ticket_uuid))
+            if ticket is None:
+                return None
+
+        runs = self.db.scalars(
+            select(AgentRun)
+            .where(AgentRun.ticket_id == ticket.id)
+            .order_by(AgentRun.started_at.desc())
+        ).all()
+
+        run_items = []
+        for run in runs:
+            steps = self.db.scalars(
+                select(AgentStep)
+                .where(AgentStep.agent_run_id == run.id)
+                .order_by(AgentStep.step_number.asc())
+            ).all()
+
+            step_items = []
+            for step in steps:
+                tool_calls = self.db.scalars(
+                    select(ToolExecution).where(ToolExecution.agent_step_id == step.id)
+                ).all()
+                step_items.append(
+                    {
+                        "step_number": step.step_number,
+                        "thought": step.thought,
+                        "action": step.action_type,
+                        "status": step.status,
+                        "created_at": step.created_at,
+                        "tool_calls": [
+                            {
+                                "tool_name": call.tool_name,
+                                "status": call.status.value if call.status else "",
+                                "error": call.error_message,
+                                "created_at": call.created_at,
+                            }
+                            for call in tool_calls
+                        ],
+                    }
+                )
+
+            run_items.append(
+                {
+                    "run_id": str(run.id),
+                    "status": run.status.value if run.status else "",
+                    "final_decision": run.final_decision,
+                    "confidence_score": run.confidence_score,
+                    "started_at": run.started_at,
+                    "ended_at": run.ended_at,
+                    "steps": step_items,
+                }
+            )
+
+        return {
+            "ticket_id": ticket.external_ticket_id,
+            "runs": run_items,
+        }
 
 
 class AgentStepRepo(BaseAgentStepRepo):
