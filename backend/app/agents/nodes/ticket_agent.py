@@ -4,7 +4,7 @@ import logging
 import random
 from typing import Any
 
-from langchain_core.messages import SystemMessage, ToolMessage
+from langchain_core.messages import SystemMessage, ToolMessage, HumanMessage
 from sqlalchemy.orm import Session
 
 from app.agents.prompts import TICKET_AGENT_SYSTEM_PROMPT
@@ -26,7 +26,7 @@ logger = AppLoggerAdapter(
 )
 
 
-_base_llm = get_chat_llm("openai", "gpt-4o-mini")
+_base_llm = get_chat_llm(envs.LLM_PROVIDER, envs.LLM_MODEL)
 llm = _base_llm.bind_tools(ticket_agent_tools)
 
 
@@ -59,6 +59,10 @@ async def reasoning_node(state: TicketAgentState) -> TicketAgentState:
     )
 
     history = list(state.get("messages") or [])
+    
+    if not len(history):
+        history.append(HumanMessage(content="Let's start"))
+    
     response = await llm.ainvoke([SystemMessage(content=prompt), *history])
     logger.debug(
         "LLM reasoning completed",
@@ -124,7 +128,12 @@ async def tool_node(state: TicketAgentState) -> TicketAgentState:
     tool_calls_made = int(state.get("tool_calls_made") or 0)
     injected_already = bool(state.get("_fault_injected") or False)
 
-    cfg = {"configurable": {"run_id": state.get("run_id")}}
+    cfg = {
+        "configurable": {
+            "thread_id": state.get("thread_id"),
+            "run_id": state.get("run_id"),
+        }
+    }
 
     for tool_call in state["messages"][-1].tool_calls:
         name = tool_call["name"]

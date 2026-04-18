@@ -184,9 +184,15 @@ class AgentRunner:
         }
 
         try:
+            thread_id = f"ticket:{external_id}"
             final_state = await graph.ainvoke(
                 state,
-                config={"configurable": {"run_id": run_id}},
+                config={
+                    "configurable": {
+                        "thread_id": thread_id,
+                        "run_id": run_id,
+                    }
+                },
             )
             outcome = self._infer_outcome(final_state)
             await self._finalize_ticket_and_run(

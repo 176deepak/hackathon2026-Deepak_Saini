@@ -12,6 +12,16 @@ from app.repositories.base import BaseOrderRepo
 from app.schemas.repo import OrderOut
 
 
+logger = AppLoggerAdapter(
+    logging.getLogger(__name__),
+    {
+        "layer": LogLayer.DB,
+        "category": LogCategory.DATABASE,
+        "component": __name__,
+    }
+)
+
+
 def _to_order_out(order: Order) -> OrderOut:
     return OrderOut(
         id=str(order.id),
@@ -31,104 +41,53 @@ class OrderRepo(BaseOrderRepo):
         super().__init__(db)
 
     def get_by_external_id(self, order_id: str) -> Optional[OrderOut]:
-        logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": __name__,
-            },
-        )
         try:
-            order = self.db.scalar(select(Order).where(Order.external_order_id == order_id))
+            order = self.db.scalar(
+                select(Order).where(Order.external_order_id == order_id)
+            )
             if order is None:
-                logger.debug(
-                    "Order not found",
-                    extra=extra_(operation="repo_get_order", status="skipped", order_id=order_id),
-                )
+                logger.debug("Order not found", extra=extra_(order_id=order_id))
                 return None
             return _to_order_out(order)
         except Exception:
-            logger.exception(
-                "Failed to fetch order",
-                extra=extra_(operation="repo_get_order", status="failure", order_id=order_id),
-            )
+            logger.exception("Failed to fetch order", extra=extra_(order_id=order_id))
             raise
 
     def get_by_customer(self, customer_id: str) -> list[OrderOut]:
         try:
             customer_uuid = UUID(customer_id)
         except ValueError:
-            AppLoggerAdapter(
-                logging.getLogger(__name__),
-                {
-                    "layer": LogLayer.DB,
-                    "category": LogCategory.DATABASE,
-                    "component": __name__,
-                },
-            ).warning(
+            logger.warning(
                 "Invalid customer UUID for order lookup",
-                extra=extra_(
-                    operation="repo_get_orders_by_customer",
-                    status="failure",
-                    customer_id=customer_id,
-                ),
+                extra=extra_(customer_id=customer_id),
             )
             return []
 
-        logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": __name__,
-            },
-        )
         try:
             orders = self.db.scalars(
                 select(Order).where(Order.customer_id == customer_uuid)
             ).all()
             logger.debug(
                 "Orders fetched for customer",
-                extra=extra_(
-                    operation="repo_get_orders_by_customer",
-                    status="success",
-                    customer_id=customer_id,
-                    count=len(orders),
-                ),
+                extra=extra_(customer_id=customer_id, count=len(orders)),
             )
             return [_to_order_out(order) for order in orders]
         except Exception:
             logger.exception(
                 "Failed to fetch orders for customer",
-                extra=extra_(
-                    operation="repo_get_orders_by_customer",
-                    status="failure",
-                    customer_id=customer_id,
-                ),
+                extra=extra_(customer_id=customer_id),
             )
             raise
 
     def update_status(self, order_id: str, status: str) -> None:
-        logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": __name__,
-            },
-        )
         try:
-            order = self.db.scalar(select(Order).where(Order.external_order_id == order_id))
+            order = self.db.scalar(
+                select(Order).where(Order.external_order_id == order_id)
+            )
             if order is None:
                 logger.warning(
                     "Order not found for status update",
-                    extra=extra_(
-                        operation="repo_update_order_status",
-                        status="skipped",
-                        order_id=order_id,
-                        new_status=status,
-                    ),
+                    extra=extra_(order_id=order_id, new_status=status),
                 )
                 return
 
@@ -137,46 +96,25 @@ class OrderRepo(BaseOrderRepo):
             self.db.commit()
             logger.info(
                 "Order status updated",
-                extra=extra_(
-                    operation="repo_update_order_status",
-                    status="success",
-                    order_id=order_id,
-                    new_status=status,
-                ),
+                extra=extra_(order_id=order_id, new_status=status),
             )
         except Exception:
             logger.exception(
                 "Failed to update order status",
-                extra=extra_(
-                    operation="repo_update_order_status",
-                    status="failure",
-                    order_id=order_id,
-                    new_status=status,
-                ),
+                extra=extra_(order_id=order_id,new_status=status),
             )
             self.db.rollback()
             raise
 
     def update_refund_status(self, order_id: str, status: str) -> None:
-        logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": __name__,
-            },
-        )
         try:
-            order = self.db.scalar(select(Order).where(Order.external_order_id == order_id))
+            order = self.db.scalar(
+                select(Order).where(Order.external_order_id == order_id)
+            )
             if order is None:
                 logger.warning(
                     "Order not found for refund status update",
-                    extra=extra_(
-                        operation="repo_update_refund_status",
-                        status="skipped",
-                        order_id=order_id,
-                        new_status=status,
-                    ),
+                    extra=extra_(order_id=order_id, new_status=status)
                 )
                 return
 
@@ -185,22 +123,12 @@ class OrderRepo(BaseOrderRepo):
             self.db.commit()
             logger.info(
                 "Order refund status updated",
-                extra=extra_(
-                    operation="repo_update_refund_status",
-                    status="success",
-                    order_id=order_id,
-                    new_status=status,
-                ),
+                extra=extra_(order_id=order_id, new_status=status)
             )
         except Exception:
             logger.exception(
                 "Failed to update refund status",
-                extra=extra_(
-                    operation="repo_update_refund_status",
-                    status="failure",
-                    order_id=order_id,
-                    new_status=status,
-                ),
+                extra=extra_(order_id=order_id, new_status=status)
             )
             self.db.rollback()
             raise

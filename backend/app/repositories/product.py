@@ -10,6 +10,16 @@ from app.repositories.base import BaseProductRepo
 from app.schemas.repo import ProductOut
 
 
+logger = AppLoggerAdapter(
+    logging.getLogger(__name__),
+    {
+        "layer": LogLayer.DB,
+        "category": LogCategory.DATABASE,
+        "component": __name__,
+    }
+)
+
+
 def _to_product_out(product: Product) -> ProductOut:
     return ProductOut(
         id=str(product.id),
@@ -25,36 +35,17 @@ class ProductRepo(BaseProductRepo):
         super().__init__(db)
 
     def get_by_external_id(self, product_id: str) -> Optional[ProductOut]:
-        logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": __name__,
-            },
-        )
         try:
             product = self.db.scalar(
                 select(Product).where(Product.external_product_id == product_id)
             )
             if product is None:
-                logger.debug(
-                    "Product not found",
-                    extra=extra_(
-                        operation="repo_get_product",
-                        status="skipped",
-                        product_id=product_id,
-                    ),
-                )
+                logger.debug("Product not found", extra=extra_(product_id=product_id))
                 return None
             return _to_product_out(product)
         except Exception:
             logger.exception(
-                "Failed to fetch product",
-                extra=extra_(
-                    operation="repo_get_product",
-                    status="failure",
-                    product_id=product_id,
-                ),
+                "Failed to fetch product", 
+                extra=extra_(product_id=product_id)
             )
             raise

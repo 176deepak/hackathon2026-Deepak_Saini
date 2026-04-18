@@ -1,3 +1,4 @@
+import gdown
 import hashlib
 import hmac
 import time
@@ -99,7 +100,9 @@ def decode_jwt(token: str) -> dict:
     except jwt.ExpiredSignatureError:
         logger.warning(
             "JWT expired (signature)",
-            extra=extra_(operation="decode_jwt", status="failure", reason="expired_signature"),
+            extra=extra_(
+                operation="decode_jwt", status="failure", reason="expired_signature"
+            ),
         )
         return None
     except jwt.InvalidTokenError as e:
@@ -123,3 +126,22 @@ def decode_jwt(token: str) -> dict:
             ),
         )
         return None
+
+
+def download_file_from_gdrive(fileid:str, filepath) -> str:
+    logger.info((
+        f"Downloading file from Google Drive - file_id:"
+        f" {fileid}, destination: {filepath}"
+    ))
+    try:
+        url = f"https://drive.google.com/file/d/{fileid}/view?usp=sharing"
+        logger.debug(f"Google Drive URL: {url}")
+        gdown.download(url, filepath, quiet=False)
+        logger.info(f"File downloaded successfully from Google Drive to {filepath}")
+        return filepath
+    except Exception as e:
+        logger.exception(
+            f"Error downloading file from Google Drive (file_id: {fileid}): {e}", 
+            exc_info=True
+        )
+        raise

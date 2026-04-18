@@ -13,6 +13,15 @@ from app.repositories.base import (
 )
 from app.schemas.repo import AgentRunOut
 
+logger = AppLoggerAdapter(
+    logging.getLogger(__name__),
+    {
+        "layer": LogLayer.DB,
+        "category": LogCategory.DATABASE,
+        "component": __name__
+    },
+)
+
 
 def _to_agent_run_out(run: AgentRun) -> AgentRunOut:
     return AgentRunOut(
@@ -29,14 +38,6 @@ def _to_agent_run_out(run: AgentRun) -> AgentRunOut:
 class AgentRunRepo(BaseAgentRunRepo):
     def __init__(self, db: Session):
         super().__init__(db)
-        self._logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": self.__class__.__name__,
-            },
-        )
 
     def create_run(self, ticket_id: str) -> AgentRunOut:
         try:
@@ -48,24 +49,14 @@ class AgentRunRepo(BaseAgentRunRepo):
             self.db.add(run)
             self.db.commit()
             self.db.refresh(run)
-            self._logger.info(
+            logger.info(
                 "Agent run created",
-                extra=extra_(
-                    operation="repo_agent_run_create",
-                    status="success",
-                    ticket_uuid=ticket_id,
-                    run_id=str(run.id),
-                ),
+                extra=extra_(ticket_uuid=ticket_id, run_id=str(run.id)),
             )
             return _to_agent_run_out(run)
         except Exception:
-            self._logger.exception(
-                "Failed to create agent run",
-                extra=extra_(
-                    operation="repo_agent_run_create",
-                    status="failure",
-                    ticket_uuid=ticket_id,
-                ),
+            logger.exception(
+                "Failed to create agent run", extra=extra_(ticket_uuid=ticket_id),
             )
             self.db.rollback()
             raise
@@ -76,13 +67,8 @@ class AgentRunRepo(BaseAgentRunRepo):
         try:
             run = self.db.scalar(select(AgentRun).where(AgentRun.id == UUID(run_id)))
             if run is None:
-                self._logger.warning(
-                    "Run not found for completion",
-                    extra=extra_(
-                        operation="repo_agent_run_complete",
-                        status="skipped",
-                        run_id=run_id,
-                    ),
+                logger.warning(
+                    "Run not found for completion", extra=extra_(run_id=run_id)
                 )
                 return
 
@@ -103,24 +89,13 @@ class AgentRunRepo(BaseAgentRunRepo):
             ) or 0
             self.db.add(run)
             self.db.commit()
-            self._logger.info(
+            logger.info(
                 "Agent run completed",
-                extra=extra_(
-                    operation="repo_agent_run_complete",
-                    status="success",
-                    run_id=run_id,
-                    final_status=status,
-                    decision=decision,
-                ),
+                extra=extra_(run_id=run_id, final_status=status, decision=decision),
             )
         except Exception:
-            self._logger.exception(
-                "Failed to complete agent run",
-                extra=extra_(
-                    operation="repo_agent_run_complete",
-                    status="failure",
-                    run_id=run_id,
-                ),
+            logger.exception(
+                "Failed to complete agent run", extra=extra_(run_id=run_id)
             )
             self.db.rollback()
             raise
@@ -129,14 +104,7 @@ class AgentRunRepo(BaseAgentRunRepo):
         try:
             run = self.db.scalar(select(AgentRun).where(AgentRun.id == UUID(run_id)))
             if run is None:
-                self._logger.warning(
-                    "Run not found for failure",
-                    extra=extra_(
-                        operation="repo_agent_run_fail",
-                        status="skipped",
-                        run_id=run_id,
-                    ),
-                )
+                logger.warning("Run not found for failure", extra=extra_(run_id=run_id))
                 return
 
             run.status = AgentRunStatus.FAILED
@@ -144,22 +112,10 @@ class AgentRunRepo(BaseAgentRunRepo):
             run.ended_at = datetime.utcnow()
             self.db.add(run)
             self.db.commit()
-            self._logger.warning(
-                "Agent run failed",
-                extra=extra_(
-                    operation="repo_agent_run_fail",
-                    status="success",
-                    run_id=run_id,
-                ),
-            )
+            logger.warning("Agent run failed", extra=extra_(run_id=run_id))
         except Exception:
-            self._logger.exception(
-                "Failed to mark agent run failed",
-                extra=extra_(
-                    operation="repo_agent_run_fail",
-                    status="failure",
-                    run_id=run_id,
-                ),
+            logger.exception(
+                "Failed to mark agent run failed", extra=extra_(run_id=run_id),
             )
             self.db.rollback()
             raise
@@ -236,15 +192,7 @@ class AgentRunRepo(BaseAgentRunRepo):
 class AgentStepRepo(BaseAgentStepRepo):
     def __init__(self, db: Session):
         super().__init__(db)
-        self._logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": self.__class__.__name__,
-            },
-        )
-
+        
     def log_step(
         self,
         run_id: str,
@@ -268,26 +216,17 @@ class AgentStepRepo(BaseAgentStepRepo):
             self.db.add(step)
             self.db.commit()
             self.db.refresh(step)
-            self._logger.debug(
+            logger.debug(
                 "Agent step logged",
                 extra=extra_(
-                    operation="repo_agent_step_log",
-                    status="success",
-                    run_id=run_id,
-                    step_number=step_number,
-                    step_id=str(step.id),
+                    run_id=run_id, step_number=step_number, step_id=str(step.id)
                 ),
             )
             return str(step.id)
         except Exception:
-            self._logger.exception(
+            logger.exception(
                 "Failed to log agent step",
-                extra=extra_(
-                    operation="repo_agent_step_log",
-                    status="failure",
-                    run_id=run_id,
-                    step_number=step_number,
-                ),
+                extra=extra_(run_id=run_id, step_number=step_number),
             )
             self.db.rollback()
             raise
@@ -296,14 +235,6 @@ class AgentStepRepo(BaseAgentStepRepo):
 class ToolExecutionRepo(BaseToolExecutionRepo):
     def __init__(self, db: Session):
         super().__init__(db)
-        self._logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": self.__class__.__name__,
-            },
-        )
 
     def log_tool_call(
         self,
@@ -325,25 +256,14 @@ class ToolExecutionRepo(BaseToolExecutionRepo):
             )
             self.db.add(execution)
             self.db.commit()
-            self._logger.debug(
+            logger.debug(
                 "Tool execution logged",
-                extra=extra_(
-                    operation="repo_tool_execution_log",
-                    status="success",
-                    step_id=step_id,
-                    tool_name=tool_name,
-                    tool_status=status,
-                ),
+                extra=extra_(step_id=step_id, tool_name=tool_name, tool_status=status),
             )
         except Exception:
-            self._logger.exception(
+            logger.exception(
                 "Failed to log tool execution",
-                extra=extra_(
-                    operation="repo_tool_execution_log",
-                    status="failure",
-                    step_id=step_id,
-                    tool_name=tool_name,
-                ),
+                extra=extra_(step_id=step_id, tool_name=tool_name),
             )
             self.db.rollback()
             raise

@@ -8,22 +8,25 @@ from app.models.models import Ticket
 from app.repositories.base import BaseDashboardRepo
 from app.schemas.repo import DashboardMetrics
 
+logger = AppLoggerAdapter(
+    logging.getLogger(__name__),
+    {
+        "layer": LogLayer.DB,
+        "category": LogCategory.DATABASE,
+        "component": __name__,
+    },
+)
+
 
 class DashboardRepo(BaseDashboardRepo):
     def __init__(self, db: Session):
         super().__init__(db)
-        self._logger = AppLoggerAdapter(
-            logging.getLogger(__name__),
-            {
-                "layer": LogLayer.DB,
-                "category": LogCategory.DATABASE,
-                "component": self.__class__.__name__,
-            },
-        )
 
     def get_metrics(self) -> DashboardMetrics:
         try:
-            total_tickets = self.db.scalar(select(func.count()).select_from(Ticket)) or 0
+            total_tickets = self.db.scalar(
+                select(func.count()).select_from(Ticket)
+            ) or 0
             resolved = self.db.scalar(
                 select(func.count())
                 .select_from(Ticket)
@@ -40,11 +43,9 @@ class DashboardRepo(BaseDashboardRepo):
                 .where(Ticket.status == TicketStatus.FAILED)
             ) or 0
 
-            self._logger.debug(
+            logger.debug(
                 "Dashboard metrics fetched",
                 extra=extra_(
-                    operation="repo_dashboard_metrics",
-                    status="success",
                     total_tickets=total_tickets,
                     resolved=resolved,
                     escalated=escalated,
@@ -59,10 +60,7 @@ class DashboardRepo(BaseDashboardRepo):
                 failed=failed,
             )
         except Exception:
-            self._logger.exception(
-                "Failed to fetch dashboard metrics",
-                extra=extra_(operation="repo_dashboard_metrics", status="failure"),
-            )
+            logger.exception("Failed to fetch dashboard metrics")
             raise
 
     def get_recent_activity(self, limit: int = 10) -> list[dict]:
@@ -70,14 +68,9 @@ class DashboardRepo(BaseDashboardRepo):
             tickets = self.db.scalars(
                 select(Ticket).order_by(Ticket.updated_at.desc()).limit(limit)
             ).all()
-            self._logger.debug(
+            logger.debug(
                 "Dashboard recent activity fetched",
-                extra=extra_(
-                    operation="repo_dashboard_recent_activity",
-                    status="success",
-                    limit=limit,
-                    count=len(tickets),
-                ),
+                extra=extra_(limit=limit, count=len(tickets)),
             )
             return [
                 {
@@ -89,12 +82,5 @@ class DashboardRepo(BaseDashboardRepo):
                 for ticket in tickets
             ]
         except Exception:
-            self._logger.exception(
-                "Failed to fetch recent activity",
-                extra=extra_(
-                    operation="repo_dashboard_recent_activity",
-                    status="failure",
-                    limit=limit,
-                ),
-            )
+            logger.exception("Failed to fetch recent activity")
             raise

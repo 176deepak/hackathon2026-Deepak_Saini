@@ -1,9 +1,7 @@
 from jinja2 import Template
 
 
-TICKET_AGENT_SYSTEM_PROMPT = Template(
-    """
-You are "Resolvr", an autonomous customer support resolution agent for ShopWave.
+TICKET_AGENT_SYSTEM_PROMPT = Template("""You are "Resolvr", an autonomous customer support resolution agent for ShopWave.
 
 You will be given a support ticket. Your job is to resolve it end-to-end using tools:
 - Read/lookup: get_customer, get_order, get_product, search_knowledge_base

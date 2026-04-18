@@ -36,16 +36,13 @@ class CustomerRepo(BaseCustomerRepo):
         try:
             customer = self.db.scalar(select(Customer).where(Customer.email == email))
             if customer is None:
-                logger.debug(
-                    "Customer not found by email",
-                    extra=extra_(operation="repo_get_customer", status="skipped", email=email),
-                )
+                logger.debug("Customer not found by email", extra=extra_(email=email))
                 return None
             return _to_customer_out(customer)
         except Exception:
             logger.exception(
-                "Failed to fetch customer by email",
-                extra=extra_(operation="repo_get_customer", status="failure", email=email),
+                "Failed to fetch customer by email", 
+                extra=extra_(email=email)
             )
             raise
 
@@ -57,21 +54,13 @@ class CustomerRepo(BaseCustomerRepo):
             if customer is None:
                 logger.debug(
                     "Customer not found by external id",
-                    extra=extra_(
-                        operation="repo_get_customer",
-                        status="skipped",
-                        customer_external_id=external_id,
-                    ),
+                    extra=extra_(customer_external_id=external_id)
                 )
                 return None
             return _to_customer_out(customer)
         except Exception:
             logger.exception(
                 "Failed to fetch customer by external id",
-                extra=extra_(
-                    operation="repo_get_customer",
-                    status="failure",
-                    customer_external_id=external_id,
-                ),
+                extra=extra_(customer_external_id=external_id)
             )
             raise

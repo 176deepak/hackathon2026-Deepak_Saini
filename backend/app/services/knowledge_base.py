@@ -26,7 +26,11 @@ class KnowledgeBaseService:
                 self.vector_index = ChromaVectorIndexService()
                 logger.debug(
                     "Using ChromaDB as vector index",
-                    extra=extra_(operation="kb_init", status="in_progress", vector_db="chroma"),
+                    extra=extra_(
+                        operation="kb_init", 
+                        status="in_progress", 
+                        vector_db="chroma"
+                    ),
                 )
 
             case _:

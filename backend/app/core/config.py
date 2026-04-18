@@ -55,6 +55,8 @@ class ENV(BaseSettings):
     AGENT_MAX_RETRIES: int = Field(2, alias="AGENT_MAX_RETRIES")
     AGENT_FAULT_INJECTION: bool = Field(True, alias="AGENT_FAULT_INJECTION")
     AGENT_DRAW_GRAPH: bool = Field(False, alias="AGENT_DRAW_GRAPH")
+    LLM_PROVIDER: str = Field(..., alias="LLM_PROVIDER")
+    LLM_MODEL: str = Field(..., alias="LLM_MODEL")
 
     GOOGLE_API_KEY: str = Field("", alias="GOOGLE_API_KEY")
     OPENAI_API_KEY: str = Field("", alias="OPENAI_API_KEY")
@@ -68,6 +70,7 @@ class ENV(BaseSettings):
     EMBEDDING_MODEL: str = Field("models/embedding-001", alias="EMBEDDING_MODEL")
     NO_TOP_K_CHUNKS: int = Field(8, alias="NO_TOP_K_CHUNKS")
     NO_TOP_N_CHUNKS: int = Field(4, alias="NO_TOP_N_CHUNKS")
+    KNOWLEDGE_BASE_UPLOAD_DIR: str = Field(..., alias="KNOWLEDGE_BASE_UPLOAD_DIR")
 
     @computed_field
     @property
@@ -94,7 +97,8 @@ class ENV(BaseSettings):
     def __init__(self):
         super().__init__()
         os.makedirs(self.APP_LOGS_DIR, exist_ok=True)
-
+        os.environ["GOOGLE_API_KEY"] = self.GOOGLE_API_KEY
+        
     model_config = SettingsConfigDict(
         env_file=".env", 
         env_file_encoding="utf-8", 

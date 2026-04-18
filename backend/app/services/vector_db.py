@@ -11,7 +11,7 @@ from langchain_text_splitters import (
     RecursiveCharacterTextSplitter,
 )
 import chromadb
-from chromadb.utils.embedding_functions import GoogleGeminiEmbeddingFunction
+from chromadb.utils.embedding_functions import GoogleGenerativeAiEmbeddingFunction
 from app.core.config import envs
 from app.core.logging import LogCategory, LogLayer, AppLoggerAdapter, extra_
 from .base import BaseChunkCreationService
@@ -130,9 +130,9 @@ class ChunkCreationService(BaseChunkCreationService):
 class ChromaVectorIndexService:
     def __init__(self):
         logger.debug("Initializing ChromaVectorIndexService")
-        self.embedder = GoogleGeminiEmbeddingFunction(
-            api_key_env_var=envs.GOOGLE_API_KEY, 
-            model_name=envs.EMBEDDING_MODEL
+        self.embedder = GoogleGenerativeAiEmbeddingFunction(
+            api_key_env_var="GOOGLE_API_KEY",
+            model_name=envs.EMBEDDING_MODEL,
         )
         logger.debug(f"Using embedding model: {envs.EMBEDDING_MODEL}")
         self.client = chromadb.PersistentClient()
