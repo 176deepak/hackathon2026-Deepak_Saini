@@ -2,6 +2,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from app.core.config import envs
 import logging
 from app.core.logging import AppLoggerAdapter, LogCategory, LogLayer, extra_
@@ -67,6 +68,17 @@ def get_chat_llm(
                 api_key=envs.GROQ_API_KEY,
                 temperature=temperature,
                 model=model,
+                streaming=streaming,
+            )
+            
+        case "ollama":
+            logger.debug(
+                "Creating ollama chat model",
+                extra=extra_(provider="ollama", model=model),
+            )
+            model = ChatOllama(
+                model=model,
+                temperature=0,
                 streaming=streaming,
             )
 

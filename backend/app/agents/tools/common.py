@@ -20,8 +20,8 @@ logger = AppLoggerAdapter(
 async def search_knowledge_base(query: str, config: RunnableConfig) -> dict:
     """Search internal knowledge base for policies, FAQs, and guidelines.
 
-    This tool is used for answering general questions such as return policies,
-    warranty rules, and process explanations.
+    This tool is used for answering questions such as return policies, refund policies,
+    warranty rules, customer type, FAQs, and process explanations, etc.
 
     Args:
         query: Natural language query describing what to search for.
