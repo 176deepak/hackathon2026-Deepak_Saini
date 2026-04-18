@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from app.clients import init_postgres
+from app.clients import init_postgres, init_redis
 from .logging import AppLoggerAdapter, LogCategory, LogLayer
 from .scheduler import scheduler
 
@@ -25,6 +25,12 @@ async def lifespan(app: FastAPI):
         await init_postgres()
 
         logger.info("PostgreSQL initialized")
+        
+        logger.debug("Initializing Redis")
+
+        await init_redis()
+
+        logger.info("Redis initialized")
 
         if not scheduler.running:
             logger.debug("Starting scheduler")

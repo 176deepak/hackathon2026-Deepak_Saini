@@ -3,17 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 from uuid import UUID
-
 from sqlalchemy.orm import Session
 
 from app.clients.pg import get_pgdb
 from app.repositories import (
-    CustomerRepo,
-    EscalationRepo,
-    OrderRepo,
-    ProductRepo,
-    RefundRepo,
-    TicketRepo,
+    CustomerRepo, EscalationRepo, OrderRepo, ProductRepo, RefundRepo, TicketRepo
 )
 from app.services.customer import CustomerService
 from app.services.orders import OrderService

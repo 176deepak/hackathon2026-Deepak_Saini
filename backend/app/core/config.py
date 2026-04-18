@@ -34,16 +34,40 @@ class ENV(BaseSettings):
     PG_DEFAULT_PAGINATION: int = Field(..., alias="PG_DEFAULT_PAGINATION")
     PG_DEFAULT_MAX_LIMIT: int = Field(..., alias="PG_DEFAULT_MAX_LIMIT")
     
-    GOOGLE_API_KEY: str = Field(..., alias="GOOGLE_API_KEY")
+    REDIS_HOST: str = Field(..., alias="REDIS_HOST")
+    REDIS_PORT: int = Field(..., alias="REDIS_PORT")
+    REDIS_USERNAME: str = Field(..., alias="REDIS_USERNAME")
+    REDIS_PASSWORD: str = Field(..., alias="REDIS_PASSWORD")
+    REDIS_DB: int = Field(..., alias="REDIS_DB")
 
-    WHICH_KNOWLEDGE_BASE: str = Field(..., alias="WHICH_KNOWLEDGE_BASE")
-    VECTOR_DB_NAME: str = Field(..., alias="VECTOR_DB_NAME")
-    CHUNK_SIZE: str = Field(..., alias="CHUNK_SIZE")
-    CHUNK_OVERLAP: str = Field(..., alias="CHUNK_OVERLAP")
-    KNOWLEDGE_BASE_GDRIVE_FILE_ID:str=Field(..., alias="KNOWLEDGE_BASE_GDRIVE_FILE_ID")
-    EMBEDDING_MODEL: str = Field(..., alias="EMBEDDING_MODEL")
-    NO_TOP_K_CHUNKS: int = Field(..., alias="NO_TOP_K_CHUNKS")
-    NO_TOP_N_CHUNKS: int = Field(..., alias="NO_TOP_N_CHUNKS")
+    # LLM provider keys (leave blank if unused in your run mode)
+    GOOGLE_API_KEY: str = Field("", alias="GOOGLE_API_KEY")
+    OPENAI_API_KEY: str = Field("", alias="OPENAI_API_KEY")
+    GROQ_API_KEY: str = Field("", alias="GROQ_API_KEY")
+
+    # Knowledge base / vector index settings (defaults allow local-first runs)
+    WHICH_KNOWLEDGE_BASE: str = Field("local", alias="WHICH_KNOWLEDGE_BASE")
+    VECTOR_DB_NAME: str = Field("shopwave_kb", alias="VECTOR_DB_NAME")
+    CHUNK_SIZE: int = Field(800, alias="CHUNK_SIZE")
+    CHUNK_OVERLAP: int = Field(120, alias="CHUNK_OVERLAP")
+    KNOWLEDGE_BASE_GDRIVE_FILE_ID: str = Field("", alias="KNOWLEDGE_BASE_GDRIVE_FILE_ID")
+    EMBEDDING_MODEL: str = Field("models/embedding-001", alias="EMBEDDING_MODEL")
+    NO_TOP_K_CHUNKS: int = Field(8, alias="NO_TOP_K_CHUNKS")
+    NO_TOP_N_CHUNKS: int = Field(4, alias="NO_TOP_N_CHUNKS")
+
+    @computed_field
+    @property
+    def redis_uri(self) -> str:
+        if self.ENVIRONMENT == "local" or envs.REDIS_HOST == "host.docker.internal":
+            return (
+                f"redis://{envs.REDIS_USERNAME}:{envs.REDIS_PASSWORD}"
+                f"@{envs.REDIS_HOST}:{envs.REDIS_PORT}/{envs.REDIS_DB}"
+            )
+
+        return (
+            f"rediss://{envs.REDIS_USERNAME}:{envs.REDIS_PASSWORD}"
+            f"@{envs.REDIS_HOST}:{envs.REDIS_PORT}/{envs.REDIS_DB}"
+        )
 
     @computed_field
     @property

@@ -1,28 +1,38 @@
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.redis import AsyncRedisSaver
 
-from app.agents.schemas.state import AgentState
-from app.agents.nodes.reasoning_node import reasoning_node
-from app.agents.nodes.tool_node import tool_node
-from app.agents.nodes.decision_node import decision_node
+from app.core.config import envs
+from app.clients.redis import get_redis
+from app.agents.schemas import TicketAgentState
+from app.agents.nodes.ticket_agent import reasoning_node, tool_node
+from app.agents.edges.ticket_agent import should_continue
 
 
-def build_agent():
-    graph = StateGraph(AgentState)
+async def init_ticket_resolver_agent():
+    ttl_config = {
+        "default_ttl": envs.HISTORY_TTL,
+        "refresh_on_read": envs.HISTORY_TTL_REFRESH_ON_READ,
+    }
 
-    graph.add_node("reason", reasoning_node)
-    graph.add_node("tool", tool_node)
+    async with AsyncRedisSaver.from_conn_string(
+        redis_client=get_redis(), ttl=ttl_config,
+    ) as checkpointer:
+        await checkpointer.asetup()
 
-    graph.set_entry_point("reason")
+    workflow = StateGraph(TicketAgentState)
 
-    graph.add_edge("reason", "tool")
-
-    graph.add_conditional_edges(
-        "tool",
-        decision_node,
+    workflow.add_node("reasoning", reasoning_node)
+    workflow.add_node("tools",  tool_node)
+    workflow.set_entry_point("reasoning")
+    workflow.add_conditional_edges(
+        "reasoning",
+        should_continue,
         {
-            "continue": "reason",
-            "end": END
-        }
+            "continue": "tools",
+            "end": END,
+        },
     )
-
-    return graph.compile()
+    workflow.add_edge("tools", "reasoning")
+    graph = workflow.compile(checkpointer=checkpointer)
+    graph.get_graph().draw_mermaid_png(output_file_path="chatbot.png")
+    return graph

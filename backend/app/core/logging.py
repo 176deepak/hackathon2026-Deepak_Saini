@@ -61,6 +61,7 @@ class LogLayer:
     LIFESPAN = "lifespan"
     MIDDLEWARE = "middleware"
     ROUTER = "router"
+    CACHE = "cache"
     
     
 class LogCategory:
@@ -74,6 +75,7 @@ class LogCategory:
     LIFESPAN = "lifespan"
     MIDDLEWARE = "middleware"
     ROUTER = "router"
+    CACHE = "cache"
     
     
 class LogEvent:

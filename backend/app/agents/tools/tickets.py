@@ -4,11 +4,26 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from app.agents.handlers.tools import (
-    handle_check_refund_eligibility,
-    handle_escalate,
-    handle_issue_refund,
-    handle_send_reply,
+    handle_check_refund_eligibility, handle_escalate, handle_issue_refund, 
+    handle_send_reply
 )
+
+
+def _extract_run_id(config: RunnableConfig) -> str | None:
+    cfg = config if isinstance(config, dict) else {}
+
+    # LangChain usually stores custom values in configurable
+    configurable: Any = cfg.get("configurable", {})
+    if isinstance(configurable, dict):
+        run_id = configurable.get("run_id")
+        if run_id:
+            return str(run_id)
+
+    run_id = cfg.get("run_id")
+    if run_id:
+        return str(run_id)
+
+    return None
 
 
 @tool("check_refund_eligibility", parse_docstring=True)
@@ -72,23 +87,6 @@ async def send_reply(ticket_id: str, message: str, config: RunnableConfig) -> di
     """
     _ = config
     return await handle_send_reply(ticket_id=ticket_id, message=message)
-
-
-def _extract_run_id(config: RunnableConfig) -> str | None:
-    cfg = config if isinstance(config, dict) else {}
-
-    # LangChain usually stores custom values in configurable
-    configurable: Any = cfg.get("configurable", {})
-    if isinstance(configurable, dict):
-        run_id = configurable.get("run_id")
-        if run_id:
-            return str(run_id)
-
-    run_id = cfg.get("run_id")
-    if run_id:
-        return str(run_id)
-
-    return None
 
 
 @tool("escalate", parse_docstring=True)

@@ -1,14 +1,14 @@
-from .config import envs
+﻿from .config import envs
 
 
-APP_TITLE ="Resolvr — Autonomous Support Resolution Agent"
+APP_TITLE = "Resolvr - Autonomous Support Resolution Agent"
 APP_VERSION = envs.APP_VERSION
 
 APP_DESCRIPTION = f"""Resolvr is an autonomous support resolution agent that ingests 
-customer tickets, understands intent, and takes real actions—like issuing refunds, 
-checking orders, or escalating cases—without human intervention. It combines multi-step 
+customer tickets, understands intent, and takes real actions - like issuing refunds,
+checking orders, or escalating cases - without human intervention. It combines multi-step
 reasoning, tool orchestration, and robust failure handling to resolve support requests 
-at scale with fullauditability.
+at scale with full auditability.
 """
 
 APP_SUMMARY = APP_DESCRIPTION

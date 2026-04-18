@@ -1,69 +1,33 @@
-import json
+from langchain_core.messages import ToolMessage
 from app.agents.prompts import TICKET_AGENT_SYSTEM_PROMPT
 from app.agents.schemas import TicketAgentState
 from app.agents.utils.utils import get_chat_llm
-from app.agents.schemas import TicketAgentState
-from app.agents.tools.tool_registry import get_tool
-from app.agents.schemas.state import AgentState
+from app.agents.tools.registry import ticket_agent_tools, ticket_agent_tools_mapper
 
 
 llm = get_chat_llm("openai", "gpt-4o-mini")
+llm.bind_tools(ticket_agent_tools)
 
 
-def ticket_agent_reasoning_node(state: TicketAgentState) -> TicketAgentState:
-    messages = state["messages"]
-
-    prompt = TICKET_AGENT_SYSTEM_PROMPT + "\n\nUser:\n" + state["user_input"]
-
-    response = llm.invoke(prompt)
-
-    try:
-        parsed = json.loads(response.content)
-    except Exception:
-        parsed = {
-            "thought": "Failed to parse",
-            "action": "escalate",
-            "action_input": {}
-        }
-
-    state["tool_calls"].append(parsed)
-    state["current_step"] += 1
-
-    return state
+async def reasoning_node(state: TicketAgentState) -> TicketAgentState:
+    prompt = TICKET_AGENT_SYSTEM_PROMPT.render(**state["ticket"])
+    response = await llm.ainvoke(prompt)
+    return {"messages": [response]}
 
 
 def tool_node(state: TicketAgentState) -> TicketAgentState:
-    last_call = state["tool_calls"][-1]
+    outputs = []
 
-    tool_name = last_call["action"]
-    tool_input = last_call.get("action_input", {})
+    for tool_call in state["messages"][-1].tool_calls:
 
-    tool = get_tool(tool_name)
-
-    if not tool:
-        result = {"error": "Tool not found"}
-    else:
-        try:
-            result = tool(tool_input)
-        except Exception as e:
-            result = {"error": str(e)}
-
-    state["messages"].append({
-        "role": "tool",
-        "name": tool_name,
-        "content": str(result)
-    })
-
-    return state
-
-
-def decision_node(state: AgentState) -> str:
-    last_call = state["tool_calls"][-1]
-
-    if last_call["action"] in ["send_reply", "issue_refund", "escalate"]:
-        return "end"
-
-    if state["current_step"] > 6:
-        return "end"
-
-    return "continue"
+        tool_result = ticket_agent_tools_mapper[tool_call["name"]].invoke(
+            tool_call["args"]
+        )
+        outputs.append(
+            ToolMessage(
+                content=tool_result,
+                name=tool_call["name"],
+                tool_call_id=tool_call["id"],
+            )
+        )
+    return {"messages": outputs}
