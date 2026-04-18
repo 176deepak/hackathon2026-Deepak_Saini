@@ -57,6 +57,26 @@ class TicketRepo(BaseTicketRepo):
         ).all()
         return [_to_ticket_out(ticket) for ticket in tickets]
 
+    def claim_pending(self, limit: int = 20) -> list[TicketOut]:
+        """Atomically claim pending tickets by marking them as processing.
+
+        Uses SELECT ... FOR UPDATE SKIP LOCKED to support safe concurrency if multiple
+        runners are active.
+        """
+        stmt = (
+            select(Ticket)
+            .where(Ticket.status == TicketStatus.PENDING)
+            .order_by(Ticket.created_at.asc())
+            .with_for_update(skip_locked=True)
+            .limit(limit)
+        )
+        rows = self.db.scalars(stmt).all()
+        for t in rows:
+            t.status = TicketStatus.PROCESSING
+            self.db.add(t)
+        self.db.commit()
+        return [_to_ticket_out(t) for t in rows]
+
     def list_tickets(
         self,
         status: str | None = None,

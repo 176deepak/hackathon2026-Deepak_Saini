@@ -14,10 +14,9 @@ async def init_ticket_resolver_agent():
         "refresh_on_read": envs.HISTORY_TTL_REFRESH_ON_READ,
     }
 
-    async with AsyncRedisSaver.from_conn_string(
-        redis_client=get_redis(), ttl=ttl_config,
-    ) as checkpointer:
-        await checkpointer.asetup()
+    # Redis-backed checkpointing (session storage)
+    checkpointer = AsyncRedisSaver(redis_client=get_redis(), ttl=ttl_config)
+    await checkpointer.asetup()
 
     workflow = StateGraph(TicketAgentState)
 
@@ -34,5 +33,6 @@ async def init_ticket_resolver_agent():
     )
     workflow.add_edge("tools", "reasoning")
     graph = workflow.compile(checkpointer=checkpointer)
-    graph.get_graph().draw_mermaid_png(output_file_path="chatbot.png")
+    if envs.AGENT_DRAW_GRAPH:
+        graph.get_graph().draw_mermaid_png(output_file_path="ticket_resolver.png")
     return graph

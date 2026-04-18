@@ -40,12 +40,21 @@ class ENV(BaseSettings):
     REDIS_PASSWORD: str = Field(..., alias="REDIS_PASSWORD")
     REDIS_DB: int = Field(..., alias="REDIS_DB")
 
-    # LLM provider keys (leave blank if unused in your run mode)
+    HISTORY_TTL: int = Field(60 * 60, alias="HISTORY_TTL")
+    HISTORY_TTL_REFRESH_ON_READ: bool = Field(True, alias="HISTORY_TTL_REFRESH_ON_READ")
+
+    AGENT_AUTORUN: bool = Field(False, alias="AGENT_AUTORUN")
+    AGENT_POLL_SECONDS: int = Field(30, alias="AGENT_POLL_SECONDS")
+    AGENT_MAX_CONCURRENCY: int = Field(8, alias="AGENT_MAX_CONCURRENCY")
+    AGENT_MAX_TICKETS_PER_TICK: int = Field(20, alias="AGENT_MAX_TICKETS_PER_TICK")
+    AGENT_MAX_RETRIES: int = Field(2, alias="AGENT_MAX_RETRIES")
+    AGENT_FAULT_INJECTION: bool = Field(True, alias="AGENT_FAULT_INJECTION")
+    AGENT_DRAW_GRAPH: bool = Field(False, alias="AGENT_DRAW_GRAPH")
+
     GOOGLE_API_KEY: str = Field("", alias="GOOGLE_API_KEY")
     OPENAI_API_KEY: str = Field("", alias="OPENAI_API_KEY")
     GROQ_API_KEY: str = Field("", alias="GROQ_API_KEY")
 
-    # Knowledge base / vector index settings (defaults allow local-first runs)
     WHICH_KNOWLEDGE_BASE: str = Field("local", alias="WHICH_KNOWLEDGE_BASE")
     VECTOR_DB_NAME: str = Field("shopwave_kb", alias="VECTOR_DB_NAME")
     CHUNK_SIZE: int = Field(800, alias="CHUNK_SIZE")
@@ -58,15 +67,16 @@ class ENV(BaseSettings):
     @computed_field
     @property
     def redis_uri(self) -> str:
-        if self.ENVIRONMENT == "local" or envs.REDIS_HOST == "host.docker.internal":
+        # Prefer plain redis locally; use TLS (rediss) elsewhere.
+        if self.ENVIRONMENT == "local" or self.REDIS_HOST == "host.docker.internal":
             return (
-                f"redis://{envs.REDIS_USERNAME}:{envs.REDIS_PASSWORD}"
-                f"@{envs.REDIS_HOST}:{envs.REDIS_PORT}/{envs.REDIS_DB}"
+                f"redis://{self.REDIS_USERNAME}:{self.REDIS_PASSWORD}"
+                f"@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
             )
 
         return (
-            f"rediss://{envs.REDIS_USERNAME}:{envs.REDIS_PASSWORD}"
-            f"@{envs.REDIS_HOST}:{envs.REDIS_PORT}/{envs.REDIS_DB}"
+            f"rediss://{self.REDIS_USERNAME}:{self.REDIS_PASSWORD}"
+            f"@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
         )
 
     @computed_field

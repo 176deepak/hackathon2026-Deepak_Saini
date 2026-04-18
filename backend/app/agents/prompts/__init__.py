@@ -1,1 +1,1 @@
-from .ticket_agent_v1 import TICKET_AGENT_SYSTEM_PROMPT
+from .ticket_agent import TICKET_AGENT_SYSTEM_PROMPT

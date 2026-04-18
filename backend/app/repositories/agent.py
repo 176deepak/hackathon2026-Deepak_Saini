@@ -51,7 +51,9 @@ class AgentRunRepo(BaseAgentRunRepo):
         run.confidence_score = confidence
         run.ended_at = datetime.utcnow()
         run.total_steps = self.db.scalar(
-            select(func.count()).select_from(AgentStep).where(AgentStep.agent_run_id == run.id)
+            select(func.count()).select_from(AgentStep).where(
+                AgentStep.agent_run_id == run.id
+            )
         ) or 0
         run.total_tool_calls = self.db.scalar(
             select(func.count())
@@ -155,7 +157,7 @@ class AgentStepRepo(BaseAgentStepRepo):
         input_payload: dict,
         output_payload: dict,
         status: str,
-    ) -> None:
+    ) -> str:
         step = AgentStep(
             agent_run_id=UUID(run_id),
             step_number=step_number,
@@ -167,6 +169,8 @@ class AgentStepRepo(BaseAgentStepRepo):
         )
         self.db.add(step)
         self.db.commit()
+        self.db.refresh(step)
+        return str(step.id)
 
 
 class ToolExecutionRepo(BaseToolExecutionRepo):

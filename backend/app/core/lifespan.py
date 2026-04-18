@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.clients import init_postgres, init_redis
+from app.core.config import envs
 from .logging import AppLoggerAdapter, LogCategory, LogLayer
 from .scheduler import scheduler
 
@@ -38,6 +39,24 @@ async def lifespan(app: FastAPI):
             scheduler.start()
 
             logger.info("Scheduler started")
+
+        if envs.AGENT_AUTORUN:
+            from app.services.agent import AgentRunner
+
+            runner = AgentRunner()
+
+            scheduler.add_job(
+                runner.run_tick,
+                "interval",
+                seconds=envs.AGENT_POLL_SECONDS,
+                id="agent_poll",
+                replace_existing=True,
+                max_instances=1,
+                coalesce=True,
+            )
+            logger.info("Agent autorun scheduled", extra={
+                "seconds": envs.AGENT_POLL_SECONDS
+            })
 
         else:
             logger.warning("Scheduler already running")

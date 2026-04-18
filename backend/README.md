@@ -25,6 +25,16 @@ python -m scripts.seed_data
 python main.py
 ```
 
+### 4) Run Agent (process pending tickets)
+One-shot demo runner (processes all `pending` tickets concurrently until none remain):
+```powershell
+python -m scripts.run_agent
+```
+
+Background mode (poller):
+- set `AGENT_AUTORUN=true` in `.env`
+- start API; the scheduler will run the agent every `AGENT_POLL_SECONDS`
+
 API base path:
 - `/api/v{APP_APIS_VERSION}/tickets`
 - `/api/v{APP_APIS_VERSION}/dashboard`

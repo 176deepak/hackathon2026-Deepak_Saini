@@ -3,26 +3,25 @@ uvicorn[standard]
 pydantic
 pydantic-settings
 
-# Database
 SQLAlchemy
 asyncpg
 psycopg2-binary
 alembic
 
-# Logging / middleware
 python-json-logger
 concurrent-log-handler
 fastapi-maintenance
 
-# Scheduler
 APScheduler
 
-# Agent stack (orchestration + tools)
 langgraph
 langchain-core
 langchain-openai
 langchain-google-genai
 langchain-groq
 
-# Vector DB / embeddings (used by KnowledgeBaseService / vector_db.py)
 chromadb
+
+redis
+
+jinja2

@@ -14,4 +14,7 @@ class TicketAgentState(TypedDict):
     ticket: Ticket
     messages: Annotated[Sequence[BaseMessage], add_messages]
     total_step: int
+    run_id: str
+    current_step_id: str | None
+    tool_calls_made: int
     final_response: Optional[str]
