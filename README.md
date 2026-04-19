@@ -1,112 +1,126 @@
 # Autonomous Support Resolution Platform
 
-This repository contains a full-stack implementation of the KSolves Agentic AI Hackathon problem statement:
+Full-stack implementation of the KSolves Agentic AI Hackathon problem statement for autonomous support ticket handling.
 
-- `backend/`: FastAPI service, LangGraph-based autonomous ticket agent, PostgreSQL persistence, Redis-backed session/checkpoint state, audit pipeline.
-- `frontend/`: React dashboard for authentication, ticket operations, recent activity, and audit timeline.
+## Platform Overview
 
-## Architecture Overview
+This repository contains two applications:
+
+- `backend/`: FastAPI service with LangGraph agent orchestration, policy-aware tool execution, audit persistence, and scheduler-driven processing of pending tickets.
+- `frontend/`: React dashboard for authentication, ticket operations, status tracking, and audit timeline inspection.
+
+## Demo Assets
+
+### Dashboard Screens
+
+![Dashboard - View 1](assets/Screenshot%202026-04-19%20102826.png)
+![Dashboard - View 2](assets/Screenshot%202026-04-19%20102837.png)
+
+### Architecture/DB Snapshot
+
+![Architecture DB Snapshot](deliverables/Shopwave%20Ticket%20Resolvr%20DB.png)
+
+### Demo Video
+
+- `deliverables/shopwave.mp4`
+
+## High-Level Architecture
 
 ```text
-+--------------------+         +---------------------------+
-| React Dashboard    |  HTTP   | FastAPI Backend           |
-| (frontend, Nginx)  +-------->+ /auth /tickets /dashboard |
-+--------------------+         | /audit /agent             |
-                               +-------------+-------------+
-                                             |
-                           +-----------------+------------------+
-                           |                                    |
-                    +------+-------+                     +------+------+
-                    | PostgreSQL   |                     | Redis       |
-                    | tickets/runs |                     | session +    |
-                    | audit/logs   |                     | checkpoints  |
-                    +--------------+                     +-------------+
+[React Dashboard] --> [FastAPI APIs + Agent Runtime] --> [PostgreSQL]
+                               |                          [Redis]
+                               +--> [LLM Provider + KB Search]
 ```
 
 ## Tech Stack
 
+- Frontend: React 19, Vite 8, CSS
 - Backend: Python 3.12, FastAPI, SQLAlchemy, Alembic, APScheduler
-- Agent: LangGraph + LangChain tools, tool-call audit persistence
-- Data Stores: PostgreSQL (system of record), Redis (runtime state/session)
-- Frontend: React + Vite, production served via Nginx
-- Deployment: Docker Compose
+- Agent Runtime: LangGraph, LangChain tools
+- Datastores: PostgreSQL (system of record), Redis (session/checkpoint/runtime state)
+- Search/Policy Context: Chroma-backed knowledge base retrieval
+- Deployment: Docker, Docker Compose
 
-## Agent Workflow Architecture
+## Agent Workflow Summary
 
-1. Ticket polling service claims `pending` tickets from DB.
-2. Agent graph executes with bounded concurrency and retries.
-3. Tool chain performs:
-   - lookup (`get_customer`, `get_order`, `get_product`, `search_knowledge_base`)
-   - policy checks (`check_refund_eligibility`)
-   - action (`send_reply`, `issue_refund`, `escalate`)
-4. Every step is written to audit tables:
-   - run-level metadata
-   - step-level thought/action/result
-   - tool-call-level outcome and errors
-5. Ticket terminal status is saved as `resolved`, `escalated`, or `failed`.
+1. Poller claims `pending` tickets from PostgreSQL.
+2. Each ticket runs through the LangGraph flow with bounded concurrency.
+3. Agent executes tool chains for lookup, policy checks, and actions.
+4. Every run writes:
+   - run metadata
+   - reasoning steps
+   - tool invocation logs (status/error/output)
+5. Ticket is finalized as `resolved`, `escalated`, or `failed`.
 
-## Docker Deployment
+## Deliverables Index
 
-The root `docker-compose.yml` starts:
+- Backend service documentation: `backend/README.md`
+- Frontend dashboard documentation: `frontend/README.md`
+- Failure mode analysis: `backend/failure_modes.md`
+- Compose deployment: `docker-compose.yml`
+- Demo recording: `deliverables/shopwave.mp4`
 
-- `postgres` on `localhost:5432`
-- `redis` on `localhost:6379`
-- `backend` on `localhost:8000`
-- `frontend` on `localhost:5173`
+## Quick Start (Docker)
 
-### 1. Prerequisites
+### Prerequisites
 
-- Docker Desktop (or Docker Engine + Compose v2)
-- A valid backend env file at `backend/.env`
+- Docker Desktop or Docker Engine with Compose v2
+- `backend/.env.docker` configured (copy from `backend/.env.docker.example`)
+- root `.env.compose` configured (copy from `.env.compose.example`)
 
-### 2. Start All Services
+### Run
+
+Create env files first:
 
 ```bash
-docker compose up --build -d
+cp .env.compose.example .env.compose
+cp backend/.env.docker.example backend/.env.docker
 ```
 
-### 3. Access
+Then start:
 
-- Frontend Dashboard: `http://localhost:5173`
+```bash
+docker compose --env-file .env.compose up --build -d
+```
+
+### Access
+
+- Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8000`
-- OpenAPI Docs: `http://localhost:8000/docs`
+- Swagger docs: `http://localhost:8000/docs`
 
-### 4. Stop
-
-```bash
-docker compose down
-```
-
-To remove persistent DB/Redis data:
+### Stop
 
 ```bash
-docker compose down -v
+docker compose --env-file .env.compose down
 ```
 
-## Repository Layout
+### Clean volumes
+
+```bash
+docker compose --env-file .env.compose down -v
+```
+
+## Repository Structure
 
 ```text
 .
-+-- backend/
-|   +-- app/
-|   |   +-- agents/
-|   |   +-- apis/
-|   |   +-- repositories/
-|   |   +-- services/
-|   |   +-- core/
-|   +-- alembic/
-|   +-- scripts/
-|   +-- README.md
-+-- frontend/
-|   +-- src/
-|   +-- Dockerfile
-|   +-- nginx.conf
-|   +-- README.md
-+-- docker-compose.yml
+|-- backend/
+|-- frontend/
+|-- assets/
+|-- deliverables/
+|-- docker-compose.yml
+`-- README.md
 ```
 
-## Notes
-
-- Redis is used as runtime session/checkpoint storage (local in-memory session storage removed).
-- PostgreSQL stores tickets, runs, and complete audit traces for explainability.
-- Frontend calls protected APIs with bearer token returned by backend auth.
+## Deliverables
+> [README](README.md)
+> 
+> [Agent Architecture](/deliverables/architecture.pdf)
+>
+> [Agent Failure Modes](/deliverables/failure_modes.md)
+> 
+> [Audit Logs JSON](/deliverables/audit_log.json)
+> [Audit Logs TXT](/deliverables/audit_log.txt)
+> 
+> [Recorded Demo](/deliverables/shopwave.mp4)

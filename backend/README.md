@@ -1,61 +1,104 @@
-# Backend - Autonomous Support Resolution Agent
+# Backend - Autonomous Support Resolution Engine
 
-This service powers the support resolution platform API and autonomous ticket agent.
+The backend is responsible for APIs, autonomous ticket processing, state management, and complete decision auditing.
 
-## Responsibilities
+## System Overview
 
-- Ticket API and dashboard API
-- Auth API (Basic Auth login issuing JWT)
-- Agent orchestration and concurrent ticket processing
-- Tool execution and policy-aware decisioning
-- Full audit logging (run, step, and tool-call granularity)
-- Scheduler-driven background polling for pending tickets
+Core backend capabilities:
 
-## Core Components
+- JWT-based authentication for dashboard/API access
+- Ticket lifecycle management (pending, processing, resolved, escalated, failed)
+- LangGraph-driven agent loop for autonomous decision making
+- Policy-aware tool orchestration with mandatory guardrails
+- Full audit trail capture at run, step, and tool-call levels
+- Scheduler-based automatic polling of pending tickets
 
-- `app/apis/`: FastAPI route handlers
-- `app/services/`: business logic and orchestration
-- `app/repositories/`: data access and persistence
-- `app/agents/`: LangGraph graph, tools, prompts, nodes, and edges
-- `app/clients/`: PostgreSQL and Redis clients
-- `app/core/`: config, security, logging, scheduler, lifespan hooks
+## Technology Stack
+
+- Runtime: Python 3.12
+- API framework: FastAPI + Uvicorn
+- Data layer: SQLAlchemy (async), Alembic
+- Primary database: PostgreSQL
+- Cache/session/checkpoint: Redis
+- Scheduler: APScheduler
+- Agent orchestration: LangGraph + LangChain tool interfaces
+- Knowledge retrieval: Chroma vector index + knowledge base service
+- Security: JWT + Basic auth (for login/docs)
+- Logging: structured log adapter with contextual metadata
+
+## Backend Architecture
+
+```text
+HTTP API Layer (app/apis)
+    -> Service Layer (app/services)
+        -> Repository Layer (app/repositories)
+            -> PostgreSQL
+
+Agent Layer (app/agents)
+    -> Prompt + Nodes + Edges + Tools
+        -> LLM Provider
+        -> Knowledge Base Search
+        -> Action Tools (reply/refund/escalate)
+    -> Audit Persistence (runs/steps/tool calls)
+```
 
 ## Agent Workflow
 
-1. Claim pending tickets from database.
-2. Execute graph with bounded concurrency (`AGENT_MAX_CONCURRENCY`).
-3. Run lookup + action tools with retry budget and fault recovery.
-4. Persist:
-   - agent run record
-   - per-step reasoning/actions
-   - tool invocation results/errors
-5. Mark final ticket status (`resolved`, `escalated`, or `failed`).
+1. Claim pending tickets (`claim_pending`) from PostgreSQL.
+2. Create `agent_run` record for traceability.
+3. Execute graph with controlled concurrency and retries.
+4. Enforce guardrails:
+   - policy-sensitive decisions require knowledge-base lookup
+   - refund issuance requires eligibility check
+5. Persist all step and tool details.
+6. Finalize ticket and run outcome.
 
-## Policy Guardrails
+## API Surface
 
-- `search_knowledge_base` is mandatory before policy-sensitive decisions.
-- `check_refund_eligibility` must execute before `issue_refund`.
-- On ambiguity, low confidence, or tool failure, agent escalates with structured summary.
+Base path: `/api/v1`
 
-## Local Setup
+- Auth
+  - `POST /auth/login`
+- Tickets
+  - `GET /tickets/`
+  - `GET /tickets/{ticket_id}`
+  - `GET /tickets/{ticket_id}/status`
+  - `PATCH /tickets/{ticket_id}/status`
+- Dashboard
+  - `GET /dashboard/metrics`
+  - `GET /dashboard/recent-activity`
+- Audit
+  - `GET /audit/{ticket_id}`
 
-### 1. Environment
+## Local Run (Without Docker)
 
-Create `.env` from `.env.example` and fill all required values.
+### 1. Configure environment
 
-### 2. Install Dependencies
+```bash
+cp .env.example .env
+```
+
+Update DB/Redis credentials and API keys in `.env`.
+
+For Docker compose deployment, use:
+
+```bash
+cp .env.docker.example .env.docker
+```
+
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Run Migrations
+### 3. Run migrations
 
 ```bash
 alembic upgrade head
 ```
 
-### 4. Seed Mock Data
+### 4. Seed data
 
 ```bash
 python -m scripts.seed_data
@@ -67,63 +110,55 @@ python -m scripts.seed_data
 python main.py
 ```
 
-## Agent Execution
+## Agent Run Modes
 
-### One-shot run
+### Manual one-shot execution
 
 ```bash
 python -m scripts.run_agent
 ```
 
-### Scheduled run
+### Automatic polling mode
 
-Set in `.env`:
+Set:
 
 - `AGENT_AUTORUN=true`
-- `AGENT_POLL_SECONDS=30` (or desired interval)
+- `AGENT_POLL_SECONDS=<interval>`
 
-When API starts, scheduler will process pending tickets automatically.
+Then start API. Scheduler will process pending tickets automatically.
 
-## API Surface
+## Docker Run
 
-- Auth:
-  - `POST /api/v1/auth/login`
-- Tickets:
-  - `GET /api/v1/tickets/`
-  - `GET /api/v1/tickets/{ticket_id}`
-  - `GET /api/v1/tickets/{ticket_id}/status`
-  - `PATCH /api/v1/tickets/{ticket_id}/status`
-- Dashboard:
-  - `GET /api/v1/dashboard/metrics`
-  - `GET /api/v1/dashboard/recent-activity`
-- Audit:
-  - `GET /api/v1/audit/{ticket_id}`
-
-## Docker
-
-Backend service is orchestrated from root compose:
+Backend is expected to run with root compose:
 
 ```bash
-docker compose up --build -d
+docker compose --env-file .env.compose up --build -d
 ```
 
-The backend container runs:
+Required env files:
 
-1. Alembic migrations
-2. Seed script
-3. FastAPI app startup
+- `../.env.compose` (copy from `../.env.compose.example`)
+- `.env.docker` (copy from `.env.docker.example`)
 
-## Persistence Model
+Backend container startup sequence:
 
-- PostgreSQL:
-  - customers, products, orders, tickets
-  - refunds, policy evaluations
-  - agent runs, steps, tool-call logs
-- Redis:
-  - runtime checkpoint/session storage for agent execution state
+1. Alembic migration (`upgrade head`)
+2. Seed mock data
+3. Start FastAPI service
 
-## Operational Notes
+Access:
 
-- Structured logging is enabled with level-appropriate events (`debug`, `info`, `warning`, `error`).
-- Logging fields are enriched using `extra_()` metadata for request, ticket, run, and tool context.
-- Designed for explainability-first behavior: no black-box terminal outcomes.
+- API: `http://localhost:8000`
+- Docs: `http://localhost:8000/docs`
+
+## Observability and Reliability
+
+- Structured logging with `extra_()` metadata enrichment
+- Audit-first design for explainable outcomes
+- Tool retries and graceful failure handling
+- LLM rate-limit controls with jitter, cooldown, and backoff
+- Escalation path for low-confidence or policy-unsafe decisions
+
+## Additional Deliverable
+
+- Failure mode analysis: `failure_modes.md`

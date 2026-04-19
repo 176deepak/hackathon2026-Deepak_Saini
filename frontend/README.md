@@ -1,27 +1,27 @@
 # Frontend - Support Resolution Dashboard
 
-This dashboard is the operational UI for the autonomous support agent platform.
+Production-oriented React dashboard for operating and monitoring the autonomous support agent system.
 
-## Features
+## Overview
 
-- Login page with backend Basic Auth integration (`/auth/login`) and JWT handling
-- Dashboard metrics (`total`, `resolved`, `escalated`, `failed`)
-- Ticket listing with selectable ticket detail panel
-- Audit timeline view for selected ticket (runs, steps, tool calls)
-- Recent activity panel with:
-  - initial limit (3 items)
-  - `Load More` pagination
-  - scrollable list container
-- Protected API access using bearer token for all secured endpoints
+The frontend provides:
+
+- Login/authentication flow
+- KPI metrics overview
+- Ticket table and ticket detail panel
+- Manual ticket status update flow
+- Recent activity panel with incremental loading
+- Audit timeline for selected ticket runs, steps, and tool calls
 
 ## Tech Stack
 
 - React 19
 - Vite 8
-- Plain CSS (KSolves-aligned color system: red, dark grey, white)
-- REST API integration against backend `/api/v1`
+- JavaScript (ES modules)
+- CSS
+- Nginx (container runtime for production build)
 
-## Environment Variables
+## Environment Configuration
 
 Create `.env` from `.env.example`:
 
@@ -30,54 +30,77 @@ VITE_API_BASE_URL=http://localhost:8000
 VITE_API_VERSION=1
 ```
 
-Note: Vite injects `VITE_*` values at build time.
+Notes:
 
-## Local Development
+- Only `VITE_*` variables are exposed to the frontend.
+- Variables are injected at build time.
+
+## Run Locally
+
+### Prerequisites
+
+- Node.js 20+ (recommended 22)
+- npm
+- Backend API running and reachable
+
+### Commands
 
 ```bash
 npm install
 npm run dev
 ```
 
-Default local URL:
+Local URL:
 
 - `http://localhost:5173`
 
-## Production Build
+## Build and Preview
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Docker
+## Run with Docker (Standalone Frontend)
 
-Frontend uses a multi-stage Docker build:
-
-1. `node:22-alpine` for building static assets
-2. `nginx:alpine` for serving production build
-
-Run via root compose:
+Build image:
 
 ```bash
-docker compose up --build -d
+docker build \
+  --build-arg VITE_API_BASE_URL=http://localhost:8000 \
+  --build-arg VITE_API_VERSION=1 \
+  -t ksolves-frontend .
 ```
 
-The frontend is exposed at:
+Run container:
+
+```bash
+docker run --rm -p 5173:80 ksolves-frontend
+```
+
+Access:
 
 - `http://localhost:5173`
 
-## API Integration Map
+## Run with Full Stack Compose
 
-- Auth:
-  - `POST /api/v1/auth/login`
-- Dashboard:
-  - `GET /api/v1/dashboard/metrics`
-  - `GET /api/v1/dashboard/recent-activity`
-- Tickets:
-  - `GET /api/v1/tickets/`
-  - `GET /api/v1/tickets/{ticket_id}`
-  - `GET /api/v1/tickets/{ticket_id}/status`
-  - `PATCH /api/v1/tickets/{ticket_id}/status`
-- Audit:
-  - `GET /api/v1/audit/{ticket_id}`
+From repository root:
+
+```bash
+docker compose --env-file .env.compose up --build -d
+```
+
+This starts frontend with backend, PostgreSQL, and Redis.
+
+## API Dependencies
+
+The dashboard integrates with:
+
+- `POST /api/v1/auth/login`
+- `GET /api/v1/dashboard/metrics`
+- `GET /api/v1/dashboard/recent-activity`
+- `GET /api/v1/tickets/`
+- `GET /api/v1/tickets/{ticket_id}`
+- `GET /api/v1/tickets/{ticket_id}/status`
+- `PATCH /api/v1/tickets/{ticket_id}/status`
+- `GET /api/v1/audit/{ticket_id}`
