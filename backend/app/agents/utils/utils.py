@@ -69,6 +69,7 @@ def get_chat_llm(
                 temperature=temperature,
                 model=model,
                 streaming=streaming,
+                max_retries=0,
             )
             
         case "ollama":
@@ -79,6 +80,7 @@ def get_chat_llm(
             model = ChatOllama(
                 model=model,
                 temperature=0,
+                base_url="https://superman-deflator-unwed.ngrok-free.dev",
                 streaming=streaming,
             )
 

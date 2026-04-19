@@ -42,6 +42,8 @@ async def lifespan(app: FastAPI):
             scheduler.start()
 
             logger.info("Scheduler started")
+        else:
+            logger.warning("Scheduler already running")
             
         if envs.ENVIRONMENT != "local":
             logger.info((
@@ -92,7 +94,7 @@ async def lifespan(app: FastAPI):
             ))
 
         else:
-            logger.warning("Scheduler already running")
+            logger.info("Agent autorun is disabled")
             
     except Exception:
         logger.exception("Application startup failed")
