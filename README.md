@@ -124,3 +124,8 @@ docker compose --env-file .env.compose down -v
 > [Audit Logs TXT](/deliverables/audit_log.txt)
 > 
 > [Recorded Demo](/deliverables/shopwave.mp4)
+
+## Docs
+> [Frontend README](/backend/README.md)
+>
+> [Backend README](/backend/README.md)
