@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("Scheduler already running")
             
-        if envs.ENVIRONMENT != "local":
+        if envs.ENVIRONMENT == "local":
             logger.info((
                 f"Non-local environment detected ({envs.ENVIRONMENT}),"
                 " setting up knowledge base"

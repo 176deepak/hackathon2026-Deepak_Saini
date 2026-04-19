@@ -155,7 +155,7 @@ def setup_logging():
     ))
 
     console_formatter = logging.Formatter(
-        "%(levelname)s - %(asctime)s - %(name)s - %(lineno)d - %(message)s"
+        "%(levelname)s - %(name)s - %(lineno)d - %(message)s"
     )
 
     console = logging.StreamHandler()
@@ -163,7 +163,7 @@ def setup_logging():
         getattr(console.stream, "isatty", lambda: False)()
     )
     console_formatter = ColorFormatter(
-        "%(levelname)s - %(asctime)s - %(name)s - %(lineno)d - %(message)s",
+        "%(levelname)s - %(name)s - %(lineno)d - %(message)s",
         use_color=use_color,
     )
     console.setFormatter(console_formatter)
